@@ -1,0 +1,17 @@
+import { LoginForm } from "@/components/login-form";
+
+export const dynamic = "force-dynamic";
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-bg px-4">
+      <LoginForm next={next && next.startsWith("/") ? next : "/dashboard"} />
+    </div>
+  );
+}
