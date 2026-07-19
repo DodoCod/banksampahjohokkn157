@@ -40,8 +40,8 @@
   --color-danger-hover: var(--danger-hover);
   --color-danger-soft: var(--danger-soft);
 
-  --font-display: "Avenir Next", "Segoe UI Semibold", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
@@ -52,6 +52,7 @@ body {
 
 h1, h2, h3, .font-display {
   font-family: var(--font-display);
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
