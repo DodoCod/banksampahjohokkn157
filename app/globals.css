@@ -40,8 +40,8 @@
   --color-danger-hover: var(--danger-hover);
   --color-danger-soft: var(--danger-soft);
 
-  --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {

@@ -69,7 +69,7 @@ export default async function BatchPage() {
                   <Td className="font-medium">{formatTanggal(b.tanggal)}</Td>
                   <Td>{b.keterangan || <span className="text-ink-soft">-</span>}</Td>
                   <Td>
-                    <Badge>{agg?.warga.size ?? 0} warga</Badge>
+                    <Badge>{agg?.warga.size ?? 0}</Badge>
                   </Td>
                   <Td>{(agg?.kg ?? 0).toFixed(1)} kg</Td>
                   <Td className="text-right">
