@@ -111,7 +111,7 @@ export function SetoranForm({ batchId, jenisList }: { batchId: string; jenisList
 
         <input type="hidden" name="mode" value={mode} />
 
-        <Button type="submit" loading={pending}>
+        <Button type="submit" size="lg" className="w-full" loading={pending}>
           {pending ? "Menyimpan..." : "Tambah Setoran"}
         </Button>
         {error && <p className="text-xs text-danger">{error}</p>}

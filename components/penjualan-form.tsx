@@ -113,7 +113,7 @@ export function PenjualanForm({ stok }: { stok: StokRingkas[] }) {
           )}
         </div>
 
-        <Button type="submit" loading={pending}>
+        <Button type="submit" size="lg" className="w-full" loading={pending}>
           {pending ? "Menyimpan..." : "Catat Penjualan"}
         </Button>
         {error && <p className="text-xs text-danger">{error}</p>}

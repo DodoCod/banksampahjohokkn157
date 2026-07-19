@@ -1,4 +1,4 @@
-import { CardStat, EmptyState, PageHeader, Table, Th, Td } from "@/components/ui/primitives";
+import { CardStat, EmptyState, ListCard, ListCardGrid, PageHeader, Table, Th, Td } from "@/components/ui/primitives";
 import { ConfigNotice } from "@/components/config-notice";
 import * as sheets from "@/services/sheets";
 import { saldoKasSaatIni } from "@/services/finance";
@@ -37,33 +37,50 @@ export default async function KasPage() {
       {kas.length === 0 ? (
         <EmptyState title="Belum ada riwayat kas" description="Kas akan bertambah otomatis setelah ada penjualan." />
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Tanggal</Th>
-              <Th>Pengepul</Th>
-              <Th>Pendapatan</Th>
-              <Th>Modal</Th>
-              <Th>Laba (masuk kas)</Th>
-              <Th>Saldo</Th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <ListCardGrid>
             {kas.map((k) => {
               const p = penjualanMap.get(k.penjualan_id);
               return (
-                <tr key={k.id}>
-                  <Td>{formatTanggal(k.tanggal)}</Td>
-                  <Td>{p?.pengepul ?? "-"}</Td>
-                  <Td>{p ? formatRupiah(p.total_pendapatan) : "-"}</Td>
-                  <Td>{p ? formatRupiah(p.total_modal) : "-"}</Td>
-                  <Td className="font-medium text-primary-ink">{formatRupiah(k.pemasukan)}</Td>
-                  <Td className="font-medium">{formatRupiah(k.saldo)}</Td>
-                </tr>
+                <ListCard
+                  key={k.id}
+                  title={p?.pengepul ?? "-"}
+                  subtitle={formatTanggal(k.tanggal)}
+                  right={formatRupiah(k.pemasukan)}
+                  rightSub={`Saldo ${formatRupiah(k.saldo)}`}
+                />
               );
             })}
-          </tbody>
-        </Table>
+          </ListCardGrid>
+
+          <Table>
+            <thead>
+              <tr>
+                <Th>Tanggal</Th>
+                <Th>Pengepul</Th>
+                <Th>Pendapatan</Th>
+                <Th>Modal</Th>
+                <Th>Laba (masuk kas)</Th>
+                <Th>Saldo</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {kas.map((k) => {
+                const p = penjualanMap.get(k.penjualan_id);
+                return (
+                  <tr key={k.id}>
+                    <Td>{formatTanggal(k.tanggal)}</Td>
+                    <Td>{p?.pengepul ?? "-"}</Td>
+                    <Td>{p ? formatRupiah(p.total_pendapatan) : "-"}</Td>
+                    <Td>{p ? formatRupiah(p.total_modal) : "-"}</Td>
+                    <Td className="font-medium text-primary-ink">{formatRupiah(k.pemasukan)}</Td>
+                    <Td className="font-medium">{formatRupiah(k.saldo)}</Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        </>
       )}
     </div>
   );

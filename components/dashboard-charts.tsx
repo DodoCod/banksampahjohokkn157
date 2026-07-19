@@ -59,7 +59,7 @@ export function DashboardCharts({ data }: { data: DashboardSummary }) {
         <p className="text-sm font-medium mb-3">Jenis sampah terbanyak (kg terkumpul)</p>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.jenisTerbanyak} layout="vertical" margin={{ left: 24 }}>
+            <BarChart data={data.jenisTerbanyak} layout="vertical" margin={{ left: -30 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e4e7ec" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 11 }} stroke="#667085" />
               <YAxis dataKey="nama" type="category" tick={{ fontSize: 11 }} stroke="#667085" width={100} />

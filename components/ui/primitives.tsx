@@ -5,6 +5,7 @@ import type {
   HTMLAttributes,
   InputHTMLAttributes,
   LabelHTMLAttributes,
+  ReactNode,
   SelectHTMLAttributes,
   TdHTMLAttributes,
   ThHTMLAttributes,
@@ -14,7 +15,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "bg-surface border border-line rounded-xl shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
+        "bg-surface border border-line rounded-2xl shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
         className
       )}
       {...props}
@@ -53,7 +54,7 @@ export function Button({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "ghost" | "danger";
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   loading?: boolean;
 }) {
   const variants = {
@@ -62,11 +63,15 @@ export function Button({
     ghost: "text-ink-soft hover:bg-primary-soft",
     danger: "bg-danger text-white hover:bg-danger-hover disabled:opacity-60",
   };
-  const sizes = { sm: "px-2.5 py-1.5 text-xs", md: "px-4 py-2 text-sm" };
+  const sizes = {
+    sm: "px-2.5 py-1.5 text-xs",
+    md: "px-4 py-2 text-sm",
+    lg: "px-4 py-3 text-sm",
+  };
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center gap-1.5 rounded-xl font-medium transition-colors disabled:cursor-not-allowed",
         variants[variant],
         sizes[size],
         className
@@ -84,7 +89,7 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return (
     <input
       className={cn(
-        "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-ink-soft/50",
+        "w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-ink-soft/50",
         className
       )}
       {...props}
@@ -96,7 +101,7 @@ export function Select({ className, children, ...props }: SelectHTMLAttributes<H
   return (
     <select
       className={cn(
-        "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary",
+        "w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary",
         className
       )}
       {...props}
@@ -161,9 +166,50 @@ export function EmptyState({ title, description }: { title: string; description?
   );
 }
 
+/** Baris data bergaya kartu, dipakai sebagai tampilan mobile untuk daftar yang di desktop berupa tabel. */
+export function ListCard({
+  title,
+  subtitle,
+  right,
+  rightSub,
+  badge,
+  extra,
+  action,
+}: {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  right?: ReactNode;
+  rightSub?: ReactNode;
+  badge?: ReactNode;
+  extra?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <Card className="p-4 flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="font-medium text-sm truncate">{title}</p>
+        {subtitle && <p className="text-xs text-ink-soft mt-0.5 truncate">{subtitle}</p>}
+        {extra && <div className="mt-1.5">{extra}</div>}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="text-right">
+          {badge && <div className="mb-1 flex justify-end">{badge}</div>}
+          {right && <p className="font-display font-semibold text-sm">{right}</p>}
+          {rightSub && <p className="text-xs text-ink-soft mt-0.5">{rightSub}</p>}
+        </div>
+        {action}
+      </div>
+    </Card>
+  );
+}
+
+export function ListCardGrid({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("grid gap-2.5 md:hidden", className)} {...props} />;
+}
+
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+    <div className="hidden md:block overflow-x-auto rounded-2xl border border-line bg-surface">
       <table className={cn("w-full text-sm", className)} {...props} />
     </div>
   );

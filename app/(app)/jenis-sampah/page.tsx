@@ -1,7 +1,7 @@
-import { EmptyState, PageHeader, Table, Th } from "@/components/ui/primitives";
+import { EmptyState, ListCardGrid, PageHeader, Table, Th } from "@/components/ui/primitives";
 import { ConfigNotice } from "@/components/config-notice";
 import { JenisSampahForm } from "@/components/jenis-sampah-form";
-import { JenisSampahRow } from "@/components/jenis-sampah-row";
+import { JenisSampahRow, JenisSampahCard } from "@/components/jenis-sampah-row";
 import * as sheets from "@/services/sheets";
 import { safeLoad } from "@/lib/safe-load";
 
@@ -35,21 +35,29 @@ export default async function JenisSampahPage() {
           description="Tambahkan jenis sampah pertama menggunakan form di atas."
         />
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Nama</Th>
-              <Th>Harga beli</Th>
-              <Th>Status</Th>
-              <Th className="text-right">Aksi</Th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <ListCardGrid>
             {list.map((item) => (
-              <JenisSampahRow key={item.id} item={item} />
+              <JenisSampahCard key={item.id} item={item} />
             ))}
-          </tbody>
-        </Table>
+          </ListCardGrid>
+
+          <Table>
+            <thead>
+              <tr>
+                <Th>Nama</Th>
+                <Th>Harga beli</Th>
+                <Th>Status</Th>
+                <Th className="text-right">Aksi</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((item) => (
+                <JenisSampahRow key={item.id} item={item} />
+              ))}
+            </tbody>
+          </Table>
+        </>
       )}
     </div>
   );

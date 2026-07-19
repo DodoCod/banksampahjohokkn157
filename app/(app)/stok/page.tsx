@@ -1,4 +1,14 @@
-import { CardStat, EmptyState, PageHeader, Table, Th, Td, Badge } from "@/components/ui/primitives";
+import {
+  Badge,
+  CardStat,
+  EmptyState,
+  ListCard,
+  ListCardGrid,
+  PageHeader,
+  Table,
+  Th,
+  Td,
+} from "@/components/ui/primitives";
 import { ConfigNotice } from "@/components/config-notice";
 import * as sheets from "@/services/sheets";
 import { getStokTersedia, ringkasStokPerJenis } from "@/services/stock";
@@ -58,13 +68,13 @@ export default async function StokPage({
         </div>
       )}
 
-      <div className="flex items-center gap-2 mb-3">
-        <p className="text-sm font-medium">Detail batch stok</p>
+      <div className="mb-3 mt-3">
+        <p className="text-sm font-medium mb-2">Detail batch stok</p>
         <div className="flex gap-1.5 flex-wrap">
           <a
             href="/stok"
-            className={`text-xs px-2.5 py-1 rounded-full border ${
-              !jenisFilter ? "bg-primary text-white border-primary" : "border-line text-ink-soft"
+            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+              !jenisFilter ? "bg-primary text-white border-primary" : "border-line text-ink-soft bg-surface"
             }`}
           >
             Semua
@@ -73,8 +83,8 @@ export default async function StokPage({
             <a
               key={j.id}
               href={`/stok?jenis=${j.id}`}
-              className={`text-xs px-2.5 py-1 rounded-full border ${
-                jenisFilter === j.id ? "bg-primary text-white border-primary" : "border-line text-ink-soft"
+              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+                jenisFilter === j.id ? "bg-primary text-white border-primary" : "border-line text-ink-soft bg-surface"
               }`}
             >
               {j.nama}
@@ -86,38 +96,61 @@ export default async function StokPage({
       {detailRows.length === 0 ? (
         <EmptyState title="Tidak ada stok untuk filter ini" />
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Batch</Th>
-              <Th>Jenis</Th>
-              <Th>Berat awal</Th>
-              <Th>Sisa</Th>
-              <Th>Modal / kg</Th>
-              <Th>Status</Th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <ListCardGrid>
             {detailRows.map((p) => {
               const batch = batchMap.get(p.batch_id);
               const modalPerKg = p.berat > 0 ? p.modal / p.berat : 0;
               return (
-                <tr key={p.id}>
-                  <Td>{batch ? formatTanggal(batch.tanggal) : "-"}</Td>
-                  <Td className="font-medium">{jenisMap.get(p.jenis_id)?.nama ?? "-"}</Td>
-                  <Td>{p.berat.toFixed(1)} kg</Td>
-                  <Td>{p.sisa_berat.toFixed(1)} kg</Td>
-                  <Td>{formatRupiah(modalPerKg)}</Td>
-                  <Td>
+                <ListCard
+                  key={p.id}
+                  title={jenisMap.get(p.jenis_id)?.nama ?? "-"}
+                  subtitle={batch ? formatTanggal(batch.tanggal) : "-"}
+                  right={`${p.sisa_berat.toFixed(1)} kg`}
+                  rightSub={formatRupiah(modalPerKg) + "/kg"}
+                  badge={
                     <Badge tone={p.tipe === "HIBAH" ? "primary" : "amber"}>
                       {p.tipe === "HIBAH" ? "Hibah" : "Dibeli"}
                     </Badge>
-                  </Td>
-                </tr>
+                  }
+                />
               );
             })}
-          </tbody>
-        </Table>
+          </ListCardGrid>
+
+          <Table>
+            <thead>
+              <tr>
+                <Th>Batch</Th>
+                <Th>Jenis</Th>
+                <Th>Berat awal</Th>
+                <Th>Sisa</Th>
+                <Th>Modal / kg</Th>
+                <Th>Status</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {detailRows.map((p) => {
+                const batch = batchMap.get(p.batch_id);
+                const modalPerKg = p.berat > 0 ? p.modal / p.berat : 0;
+                return (
+                  <tr key={p.id}>
+                    <Td>{batch ? formatTanggal(batch.tanggal) : "-"}</Td>
+                    <Td className="font-medium">{jenisMap.get(p.jenis_id)?.nama ?? "-"}</Td>
+                    <Td>{p.berat.toFixed(1)} kg</Td>
+                    <Td>{p.sisa_berat.toFixed(1)} kg</Td>
+                    <Td>{formatRupiah(modalPerKg)}</Td>
+                    <Td>
+                      <Badge tone={p.tipe === "HIBAH" ? "primary" : "amber"}>
+                        {p.tipe === "HIBAH" ? "Hibah" : "Dibeli"}
+                      </Badge>
+                    </Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        </>
       )}
     </div>
   );

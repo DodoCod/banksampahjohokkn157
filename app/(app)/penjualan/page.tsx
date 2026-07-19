@@ -1,4 +1,4 @@
-import { EmptyState, PageHeader, Table, Th, Td } from "@/components/ui/primitives";
+import { Badge, EmptyState, ListCard, ListCardGrid, PageHeader, Table, Th, Td } from "@/components/ui/primitives";
 import { ConfigNotice } from "@/components/config-notice";
 import { PenjualanForm } from "@/components/penjualan-form";
 import * as sheets from "@/services/sheets";
@@ -39,32 +39,47 @@ export default async function PenjualanPage() {
       {penjualan.length === 0 ? (
         <EmptyState title="Belum ada penjualan" description="Catat penjualan pertama menggunakan form di atas." />
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Tanggal</Th>
-              <Th>Pengepul</Th>
-              <Th>Jenis</Th>
-              <Th>Berat</Th>
-              <Th>Modal</Th>
-              <Th>Pendapatan</Th>
-              <Th>Laba</Th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <ListCardGrid>
             {penjualan.map((p) => (
-              <tr key={p.id}>
-                <Td>{formatTanggal(p.tanggal)}</Td>
-                <Td className="font-medium">{p.pengepul}</Td>
-                <Td>{jenisMap.get(p.jenis_id)?.nama ?? "-"}</Td>
-                <Td>{p.total_kg.toFixed(1)} kg</Td>
-                <Td>{formatRupiah(p.total_modal)}</Td>
-                <Td>{formatRupiah(p.total_pendapatan)}</Td>
-                <Td className="font-medium text-primary-ink">{formatRupiah(p.laba)}</Td>
-              </tr>
+              <ListCard
+                key={p.id}
+                title={p.pengepul}
+                subtitle={`${jenisMap.get(p.jenis_id)?.nama ?? "-"} · ${formatTanggal(p.tanggal)}`}
+                right={formatRupiah(p.laba)}
+                rightSub={`${p.total_kg.toFixed(1)} kg`}
+                badge={<Badge>Laba</Badge>}
+              />
             ))}
-          </tbody>
-        </Table>
+          </ListCardGrid>
+
+          <Table>
+            <thead>
+              <tr>
+                <Th>Tanggal</Th>
+                <Th>Pengepul</Th>
+                <Th>Jenis</Th>
+                <Th>Berat</Th>
+                <Th>Modal</Th>
+                <Th>Pendapatan</Th>
+                <Th>Laba</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {penjualan.map((p) => (
+                <tr key={p.id}>
+                  <Td>{formatTanggal(p.tanggal)}</Td>
+                  <Td className="font-medium">{p.pengepul}</Td>
+                  <Td>{jenisMap.get(p.jenis_id)?.nama ?? "-"}</Td>
+                  <Td>{p.total_kg.toFixed(1)} kg</Td>
+                  <Td>{formatRupiah(p.total_modal)}</Td>
+                  <Td>{formatRupiah(p.total_pendapatan)}</Td>
+                  <Td className="font-medium text-primary-ink">{formatRupiah(p.laba)}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </>
       )}
     </div>
   );

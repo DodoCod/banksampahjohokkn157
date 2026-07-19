@@ -1,7 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { Badge, EmptyState, PageHeader, Table, Th, Td } from "@/components/ui/primitives";
+import {
+  Badge,
+  EmptyState,
+  ListCard,
+  ListCardGrid,
+  PageHeader,
+  Table,
+  Th,
+  Td,
+} from "@/components/ui/primitives";
 import { ConfigNotice } from "@/components/config-notice";
 import { SetoranForm } from "@/components/setoran-form";
 import { DeleteBatchButton } from "@/components/delete-batch-button";
@@ -51,7 +60,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
         action={<DeleteBatchButton id={batch.id} tanggal={formatTanggal(batch.tanggal)} />}
       />
 
-      <div className="flex gap-3 mb-6 text-sm text-ink-soft">
+      <div className="flex gap-2 mb-6 flex-wrap">
         <Badge>{totalKg.toFixed(1)} kg terkumpul</Badge>
         <Badge tone="amber">Modal {formatRupiah(totalModal)}</Badge>
       </div>
@@ -64,34 +73,53 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
           description="Tambahkan setoran warga pertama menggunakan form di atas."
         />
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Warga</Th>
-              <Th>Jenis</Th>
-              <Th>Berat</Th>
-              <Th>Status</Th>
-              <Th>Modal</Th>
-              <Th>Sisa stok</Th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <ListCardGrid>
             {pengumpulan.map((p) => (
-              <tr key={p.id}>
-                <Td className="font-medium">{p.warga}</Td>
-                <Td>{jenisMap.get(p.jenis_id)?.nama ?? "-"}</Td>
-                <Td>{p.berat.toFixed(1)} kg</Td>
-                <Td>
+              <ListCard
+                key={p.id}
+                title={p.warga}
+                subtitle={jenisMap.get(p.jenis_id)?.nama ?? "-"}
+                right={`${p.berat.toFixed(1)} kg`}
+                rightSub={`Sisa ${p.sisa_berat.toFixed(1)} kg`}
+                badge={
                   <Badge tone={p.tipe === "HIBAH" ? "primary" : "amber"}>
                     {p.tipe === "HIBAH" ? "Hibah" : "Dibeli"}
                   </Badge>
-                </Td>
-                <Td>{formatRupiah(p.modal)}</Td>
-                <Td>{p.sisa_berat.toFixed(1)} kg</Td>
-              </tr>
+                }
+              />
             ))}
-          </tbody>
-        </Table>
+          </ListCardGrid>
+
+          <Table>
+            <thead>
+              <tr>
+                <Th>Warga</Th>
+                <Th>Jenis</Th>
+                <Th>Berat</Th>
+                <Th>Status</Th>
+                <Th>Modal</Th>
+                <Th>Sisa stok</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {pengumpulan.map((p) => (
+                <tr key={p.id}>
+                  <Td className="font-medium">{p.warga}</Td>
+                  <Td>{jenisMap.get(p.jenis_id)?.nama ?? "-"}</Td>
+                  <Td>{p.berat.toFixed(1)} kg</Td>
+                  <Td>
+                    <Badge tone={p.tipe === "HIBAH" ? "primary" : "amber"}>
+                      {p.tipe === "HIBAH" ? "Hibah" : "Dibeli"}
+                    </Badge>
+                  </Td>
+                  <Td>{formatRupiah(p.modal)}</Td>
+                  <Td>{p.sisa_berat.toFixed(1)} kg</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </>
       )}
     </div>
   );

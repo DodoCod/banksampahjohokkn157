@@ -1,5 +1,15 @@
 import Link from "next/link";
-import { EmptyState, PageHeader, Table, Th, Td, Badge } from "@/components/ui/primitives";
+import { ChevronRight } from "lucide-react";
+import {
+  Badge,
+  EmptyState,
+  ListCard,
+  ListCardGrid,
+  PageHeader,
+  Table,
+  Td,
+  Th,
+} from "@/components/ui/primitives";
 import { ConfigNotice } from "@/components/config-notice";
 import { BatchForm } from "@/components/batch-form";
 import * as sheets from "@/services/sheets";
@@ -51,37 +61,56 @@ export default async function BatchPage() {
           description="Buat batch pertama menggunakan form di atas."
         />
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Tanggal</Th>
-              <Th>Keterangan</Th>
-              <Th>Warga</Th>
-              <Th>Total kg</Th>
-              <Th></Th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <ListCardGrid>
             {batches.map((b) => {
               const agg = jumlahPerBatch.get(b.id);
               return (
-                <tr key={b.id}>
-                  <Td className="font-medium">{formatTanggal(b.tanggal)}</Td>
-                  <Td>{b.keterangan || <span className="text-ink-soft">-</span>}</Td>
-                  <Td>
-                    <Badge>{agg?.warga.size ?? 0}</Badge>
-                  </Td>
-                  <Td>{(agg?.kg ?? 0).toFixed(1)} kg</Td>
-                  <Td className="text-right">
-                    <Link href={`/batch/${b.id}`} className="text-sm text-primary-ink hover:underline">
-                      Detail →
-                    </Link>
-                  </Td>
-                </tr>
+                <Link key={b.id} href={`/batch/${b.id}`}>
+                  <ListCard
+                    title={formatTanggal(b.tanggal)}
+                    subtitle={b.keterangan || `${agg?.warga.size ?? 0} warga`}
+                    right={`${(agg?.kg ?? 0).toFixed(1)} kg`}
+                    badge={<Badge>{agg?.warga.size ?? 0} warga</Badge>}
+                    action={<ChevronRight size={16} className="text-ink-soft" />}
+                  />
+                </Link>
               );
             })}
-          </tbody>
-        </Table>
+          </ListCardGrid>
+
+          <Table>
+            <thead>
+              <tr>
+                <Th>Tanggal</Th>
+                <Th>Keterangan</Th>
+                <Th>Warga</Th>
+                <Th>Total kg</Th>
+                <Th></Th>
+              </tr>
+            </thead>
+            <tbody>
+              {batches.map((b) => {
+                const agg = jumlahPerBatch.get(b.id);
+                return (
+                  <tr key={b.id}>
+                    <Td className="font-medium">{formatTanggal(b.tanggal)}</Td>
+                    <Td>{b.keterangan || <span className="text-ink-soft">-</span>}</Td>
+                    <Td>
+                      <Badge>{agg?.warga.size ?? 0} warga</Badge>
+                    </Td>
+                    <Td>{(agg?.kg ?? 0).toFixed(1)} kg</Td>
+                    <Td className="text-right">
+                      <Link href={`/batch/${b.id}`} className="text-sm text-primary-ink hover:underline">
+                        Detail →
+                      </Link>
+                    </Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        </>
       )}
     </div>
   );
