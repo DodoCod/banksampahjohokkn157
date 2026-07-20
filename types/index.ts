@@ -69,6 +69,17 @@ export interface WargaSetoranInput {
   harga_beli?: number; // override harga beli, default ke harga master jenis sampah
 }
 
+export interface SetoranItemInput {
+  jenisId: string;
+  jenisNama: string;
+  mode: "HIBAH" | "DIJUAL" | "SEBAGIAN";
+  berat: number; // total berat baris ini (utk HIBAH/DIJUAL) atau total setoran utk SEBAGIAN
+  hibahKg?: number; // hanya untuk mode SEBAGIAN
+  dijualKg?: number; // hanya untuk mode SEBAGIAN
+  hargaBeli?: number; // override harga beli/kg, kosong = pakai harga master jenis sampah
+  modalPreview: number; // estimasi modal baris ini, hanya untuk tampilan di daftar
+}
+
 export interface PenjualanItemInput {
   jenisId: string;
   jenisNama: string;
