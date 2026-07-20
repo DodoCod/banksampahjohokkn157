@@ -57,12 +57,25 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
       <PageHeader
         title={formatTanggal(batch.tanggal)}
         description={batch.keterangan || "Batch pengumpulan sampah"}
-        action={<DeleteBatchButton id={batch.id} tanggal={formatTanggal(batch.tanggal)} />}
+        action={
+          <DeleteBatchButton
+            id={batch.id}
+            tanggal={formatTanggal(batch.tanggal)}
+            hasSetoran={pengumpulan.length > 0}
+          />
+        }
       />
 
-      <div className="flex gap-2 mb-6 flex-wrap">
-        <Badge>{totalKg.toFixed(1)} kg terkumpul</Badge>
-        <Badge tone="amber">Modal {formatRupiah(totalModal)}</Badge>
+      <div className="mb-6">
+        <div className="flex gap-2 flex-wrap">
+          <Badge>{totalKg.toFixed(1)} kg terkumpul</Badge>
+          <Badge tone="amber">Modal {formatRupiah(totalModal)}</Badge>
+        </div>
+        {pengumpulan.length > 0 && (
+          <p className="text-xs text-ink-soft mt-2">
+            Batch tidak bisa dihapus lagi karena sudah punya setoran warga tercatat.
+          </p>
+        )}
       </div>
 
       <SetoranForm batchId={batch.id} jenisList={jenisList} />

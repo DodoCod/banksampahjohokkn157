@@ -12,6 +12,8 @@ export function ConfirmDeleteButton({
   trigger,
   size = "sm",
   triggerVariant = "ghost",
+  disabled = false,
+  disabledReason,
 }: {
   title: string;
   description?: string;
@@ -20,6 +22,8 @@ export function ConfirmDeleteButton({
   trigger?: ReactNode;
   size?: "sm" | "md";
   triggerVariant?: "ghost" | "secondary" | "danger";
+  disabled?: boolean;
+  disabledReason?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +47,8 @@ export function ConfirmDeleteButton({
         type="button"
         variant={triggerVariant}
         size={size}
+        disabled={disabled}
+        title={disabled ? disabledReason : undefined}
         onClick={() => {
           setError(null);
           setOpen(true);

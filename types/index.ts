@@ -34,7 +34,7 @@ export interface Penjualan {
   id: string;
   tanggal: string;
   pengepul: string;
-  jenis_id: string;
+  jenis_ids: string; // daftar id jenis sampah yang terjual, dipisah koma (bisa lebih dari 1 jenis per transaksi)
   total_kg: number;
   total_modal: number;
   total_pendapatan: number;
@@ -67,6 +67,13 @@ export interface WargaSetoranInput {
   hibah_kg?: number; // hanya untuk mode SEBAGIAN
   dijual_kg?: number; // hanya untuk mode SEBAGIAN
   harga_beli?: number; // override harga beli, default ke harga master jenis sampah
+}
+
+export interface PenjualanItemInput {
+  jenisId: string;
+  jenisNama: string;
+  berat: number;
+  totalHarga: number;
 }
 
 export interface StokRingkas {

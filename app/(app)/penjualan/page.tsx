@@ -5,8 +5,18 @@ import * as sheets from "@/services/sheets";
 import { ringkasStokPerJenis } from "@/services/stock";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
 import { safeLoad } from "@/lib/safe-load";
+import type { JenisSampah } from "@/types";
 
 export const dynamic = "force-dynamic";
+
+function namaJenisTerjual(jenisIds: string, jenisMap: Map<string, JenisSampah>): string {
+  const ids = jenisIds
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  if (ids.length === 0) return "-";
+  return ids.map((id) => jenisMap.get(id)?.nama ?? "?").join(", ");
+}
 
 export default async function PenjualanPage() {
   const result = await safeLoad(async () => {
@@ -33,7 +43,10 @@ export default async function PenjualanPage() {
 
   return (
     <div>
-      <PageHeader title="Penjualan" description="Penjualan stok ke pengepul, stok diambil otomatis metode FIFO." />
+      <PageHeader
+        title="Penjualan"
+        description="Penjualan stok ke pengepul, bisa lebih dari 1 jenis sekaligus. Stok diambil otomatis metode FIFO."
+      />
       <PenjualanForm stok={stok} />
 
       {penjualan.length === 0 ? (
@@ -45,7 +58,7 @@ export default async function PenjualanPage() {
               <ListCard
                 key={p.id}
                 title={p.pengepul}
-                subtitle={`${jenisMap.get(p.jenis_id)?.nama ?? "-"} · ${formatTanggal(p.tanggal)}`}
+                subtitle={`${namaJenisTerjual(p.jenis_ids, jenisMap)} · ${formatTanggal(p.tanggal)}`}
                 right={formatRupiah(p.laba)}
                 rightSub={`${p.total_kg.toFixed(1)} kg`}
                 badge={<Badge>Laba</Badge>}
@@ -70,7 +83,7 @@ export default async function PenjualanPage() {
                 <tr key={p.id}>
                   <Td>{formatTanggal(p.tanggal)}</Td>
                   <Td className="font-medium">{p.pengepul}</Td>
-                  <Td>{jenisMap.get(p.jenis_id)?.nama ?? "-"}</Td>
+                  <Td className="max-w-[220px]">{namaJenisTerjual(p.jenis_ids, jenisMap)}</Td>
                   <Td>{p.total_kg.toFixed(1)} kg</Td>
                   <Td>{formatRupiah(p.total_modal)}</Td>
                   <Td>{formatRupiah(p.total_pendapatan)}</Td>

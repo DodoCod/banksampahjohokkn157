@@ -30,7 +30,7 @@ export default async function KasPage() {
     <div>
       <PageHeader title="Kas" description="Riwayat kas bertambah otomatis dari laba bersih setiap penjualan." />
 
-      <div className="mb-6 max-w-xs">
+      <div className="mb-6 max-w-m">
         <CardStat label="Saldo Kas Saat Ini" value={formatRupiah(saldo)} accent="danger" />
       </div>
 

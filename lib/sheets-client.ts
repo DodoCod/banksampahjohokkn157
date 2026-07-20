@@ -76,7 +76,7 @@ export const SHEET_HEADERS: Record<SheetName, string[]> = {
     "id",
     "tanggal",
     "pengepul",
-    "jenis_id",
+    "jenis_ids",
     "total_kg",
     "total_modal",
     "total_pendapatan",

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil, X } from "lucide-react";
-import { Badge, Button, Card, Input, Td } from "@/components/ui/primitives";
+import { Pencil, X, Check } from "lucide-react";
+import { Badge, Button, Card, Input, Label, Td } from "@/components/ui/primitives";
 import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
-import { formatRupiah } from "@/lib/utils";
+import { cn, formatRupiah } from "@/lib/utils";
 import { updateJenisSampahAction, deleteJenisSampahAction } from "@/app/actions/jenis-sampah";
 import type { JenisSampah } from "@/types";
 
@@ -40,38 +40,82 @@ function EditForm({
   error,
   onSave,
   onCancel,
-  className,
+  layout,
 }: {
   item: JenisSampah;
   pending: boolean;
   error: string | null;
   onSave: (formData: FormData) => void;
   onCancel: () => void;
-  className?: string;
+  layout: "row" | "card";
 }) {
   return (
-    <form action={onSave} className={className}>
+    <form
+      action={onSave}
+      className={cn(
+        "rounded-xl border border-primary/30 bg-primary-soft/40 p-3",
+        layout === "row" ? "grid grid-cols-[2fr_1.2fr_1fr_auto] gap-3 items-end" : "space-y-3"
+      )}
+    >
       <input type="hidden" name="id" value={item.id} />
-      <div className="w-40">
-        <Input name="nama" defaultValue={item.nama} required />
+
+      <div className={layout === "card" ? "grid grid-cols-2 gap-3" : "contents"}>
+        <div>
+          <Label htmlFor={`nama-${item.id}`}>Nama</Label>
+          <Input id={`nama-${item.id}`} name="nama" defaultValue={item.nama} required />
+        </div>
+        <div>
+          <Label htmlFor={`harga-${item.id}`}>Harga beli / kg</Label>
+          <Input
+            id={`harga-${item.id}`}
+            name="harga_beli"
+            type="number"
+            min={0}
+            step="1"
+            defaultValue={item.harga_beli}
+            required
+          />
+        </div>
+        {layout === "card" && (
+          <div>
+            <Label htmlFor={`satuan-${item.id}`}>Satuan</Label>
+            <Input id={`satuan-${item.id}`} name="satuan" defaultValue={item.satuan} required />
+          </div>
+        )}
       </div>
-      <div className="w-32">
-        <Input name="harga_beli" type="number" min={0} step="1" defaultValue={item.harga_beli} required />
+
+      {layout === "row" && (
+        <div>
+          <Label htmlFor={`satuan-${item.id}`}>Satuan</Label>
+          <Input id={`satuan-${item.id}`} name="satuan" defaultValue={item.satuan} required />
+        </div>
+      )}
+
+      <div className={layout === "row" ? "flex items-center gap-2" : "flex items-center justify-between"}>
+        <label className="flex items-center gap-1.5 text-xs text-ink-soft cursor-pointer select-none">
+          <input
+            type="checkbox"
+            name="aktif"
+            defaultChecked={item.aktif}
+            className="w-4 h-4 rounded accent-primary"
+          />
+          Aktif
+        </label>
+
+        <div className="flex items-center gap-1.5">
+          <Button type="button" variant="secondary" size="sm" onClick={onCancel} disabled={pending}>
+            <X size={14} />
+          </Button>
+          <Button type="submit" size="sm" loading={pending}>
+            {pending ? "" : <Check size={14} />}
+            {pending ? "Menyimpan..." : "Simpan"}
+          </Button>
+        </div>
       </div>
-      <div className="w-20">
-        <Input name="satuan" defaultValue={item.satuan} required />
-      </div>
-      <label className="flex items-center gap-1.5 text-xs text-ink-soft px-1">
-        <input type="checkbox" name="aktif" defaultChecked={item.aktif} />
-        Aktif
-      </label>
-      <Button type="submit" size="sm" loading={pending}>
-        {pending ? "Menyimpan..." : "Simpan"}
-      </Button>
-      <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-        <X size={14} />
-      </Button>
-      {error && <span className="text-xs text-danger basis-full">{error}</span>}
+
+      {error && (
+        <p className={cn("text-xs text-danger", layout === "row" && "col-span-4")}>{error}</p>
+      )}
     </form>
   );
 }
@@ -83,14 +127,14 @@ export function JenisSampahRow({ item }: { item: JenisSampah }) {
   if (editing) {
     return (
       <tr>
-        <Td colSpan={4}>
+        <Td colSpan={4} className="bg-primary-soft/10">
           <EditForm
             item={item}
             pending={pending}
             error={error}
             onSave={handleSave}
             onCancel={() => setEditing(false)}
-            className="flex flex-wrap items-end gap-2 py-1"
+            layout="row"
           />
         </Td>
       </tr>
@@ -128,16 +172,14 @@ export function JenisSampahCard({ item }: { item: JenisSampah }) {
 
   if (editing) {
     return (
-      <Card className="p-4">
-        <EditForm
-          item={item}
-          pending={pending}
-          error={error}
-          onSave={handleSave}
-          onCancel={() => setEditing(false)}
-          className="flex flex-col gap-2 [&>div]:w-full"
-        />
-      </Card>
+      <EditForm
+        item={item}
+        pending={pending}
+        error={error}
+        onSave={handleSave}
+        onCancel={() => setEditing(false)}
+        layout="card"
+      />
     );
   }
 

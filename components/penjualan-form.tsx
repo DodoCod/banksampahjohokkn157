@@ -1,97 +1,191 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { Button, Card, Input, Label, Select } from "@/components/ui/primitives";
+import { useMemo, useState, useTransition } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import { Badge, Button, Card, Input, Label, Select } from "@/components/ui/primitives";
 import { createPenjualanAction } from "@/app/actions/penjualan";
-import { formatKg } from "@/lib/utils";
-import type { StokRingkas } from "@/types";
+import { formatKg, formatRupiah } from "@/lib/utils";
+import type { PenjualanItemInput, StokRingkas } from "@/types";
 
 export function PenjualanForm({ stok }: { stok: StokRingkas[] }) {
-  const formRef = useRef<HTMLFormElement>(null);
-  const [jenisId, setJenisId] = useState("");
-  const [hargaMode, setHargaMode] = useState<"per_kg" | "total">("per_kg");
+  const [tanggal, setTanggal] = useState(() => new Date().toISOString().slice(0, 10));
+  const [pengepul, setPengepul] = useState("");
+  const [items, setItems] = useState<PenjualanItemInput[]>([]);
+
+  const [lineJenisId, setLineJenisId] = useState("");
+  const [lineBerat, setLineBerat] = useState("");
+  const [lineHargaMode, setLineHargaMode] = useState<"per_kg" | "total">("per_kg");
+  const [lineHarga, setLineHarga] = useState("");
+  const [lineError, setLineError] = useState<string | null>(null);
+
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const today = new Date().toISOString().slice(0, 10);
 
-  const stokJenis = stok.find((s) => s.jenis_id === jenisId);
+  const beratTerpakaiPerJenis = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of items) {
+      map.set(item.jenisId, (map.get(item.jenisId) ?? 0) + item.berat);
+    }
+    return map;
+  }, [items]);
+
+  const stokJenis = stok.find((s) => s.jenis_id === lineJenisId);
+  const sisaSetelahDikurangiKeranjang = stokJenis
+    ? stokJenis.total_sisa_kg - (beratTerpakaiPerJenis.get(lineJenisId) ?? 0)
+    : null;
+
+  const totalBerat = items.reduce((sum, i) => sum + i.berat, 0);
+  const totalHarga = items.reduce((sum, i) => sum + i.totalHarga, 0);
+
+  function resetLine() {
+    setLineJenisId("");
+    setLineBerat("");
+    setLineHarga("");
+    setLineHargaMode("per_kg");
+  }
+
+  function handleTambahKeDaftar() {
+    setLineError(null);
+    const jenis = stok.find((s) => s.jenis_id === lineJenisId);
+    const berat = Number(lineBerat);
+    const hargaInput = Number(lineHarga);
+
+    if (!jenis) return setLineError("Pilih jenis sampah terlebih dahulu.");
+    if (!berat || berat <= 0) return setLineError("Berat harus lebih dari nol.");
+    if (!lineHarga || hargaInput < 0) return setLineError("Isi harga jual.");
+    if (sisaSetelahDikurangiKeranjang !== null && berat > sisaSetelahDikurangiKeranjang) {
+      return setLineError(
+        `Stok ${jenis.jenis_nama} tersisa ${formatKg(sisaSetelahDikurangiKeranjang)} setelah dikurangi item di daftar.`
+      );
+    }
+
+    const totalHargaItem = lineHargaMode === "per_kg" ? hargaInput * berat : hargaInput;
+
+    setItems((prev) => [
+      ...prev,
+      { jenisId: jenis.jenis_id, jenisNama: jenis.jenis_nama, berat, totalHarga: totalHargaItem },
+    ]);
+    resetLine();
+  }
+
+  function handleSubmit() {
+    setError(null);
+    if (!tanggal) return setError("Tanggal wajib diisi.");
+    if (!pengepul.trim()) return setError("Nama pengepul wajib diisi.");
+    if (items.length === 0) return setError("Tambahkan minimal 1 jenis sampah ke daftar penjualan.");
+
+    startTransition(async () => {
+      try {
+        const fd = new FormData();
+        fd.set("tanggal", tanggal);
+        fd.set("pengepul", pengepul.trim());
+        fd.set(
+          "items",
+          JSON.stringify(items.map((i) => ({ jenisId: i.jenisId, berat: i.berat, totalHarga: i.totalHarga })))
+        );
+        await createPenjualanAction(fd);
+        setItems([]);
+        setPengepul("");
+        setTanggal(new Date().toISOString().slice(0, 10));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Gagal menyimpan.");
+      }
+    });
+  }
 
   return (
     <Card className="p-4 mb-6">
       <p className="text-sm font-medium mb-3">Catat penjualan ke pengepul</p>
-      <form
-        ref={formRef}
-        action={(formData) => {
-          setError(null);
-          startTransition(async () => {
-            try {
-              await createPenjualanAction(formData);
-              formRef.current?.reset();
-              setJenisId("");
-            } catch (e) {
-              setError(e instanceof Error ? e.message : "Gagal menyimpan.");
-            }
-          });
-        }}
-        className="space-y-3"
-      >
-        <div className="grid sm:grid-cols-3 gap-3">
+
+      <div className="space-y-4">
+        <div className="grid sm:grid-cols-2 gap-3">
           <div>
             <Label htmlFor="tanggal">Tanggal</Label>
-            <Input id="tanggal" name="tanggal" type="date" defaultValue={today} required />
+            <Input
+              id="tanggal"
+              type="date"
+              value={tanggal}
+              onChange={(e) => setTanggal(e.target.value)}
+              required
+            />
           </div>
           <div>
             <Label htmlFor="pengepul">Pengepul</Label>
-            <Input id="pengepul" name="pengepul" placeholder="UD Sumber Rejeki" required />
-          </div>
-          <div>
-            <Label htmlFor="jenis_id">Jenis sampah</Label>
-            <Select
-              id="jenis_id"
-              name="jenis_id"
+            <Input
+              id="pengepul"
+              placeholder="UD Sumber Rejeki"
+              value={pengepul}
+              onChange={(e) => setPengepul(e.target.value)}
               required
-              value={jenisId}
-              onChange={(e) => setJenisId(e.target.value)}
-            >
-              <option value="" disabled>
-                Pilih jenis
-              </option>
-              {stok.map((s) => (
-                <option key={s.jenis_id} value={s.jenis_id}>
-                  {s.jenis_nama}
-                </option>
-              ))}
-            </Select>
-            {stokJenis && (
-              <p className="text-xs text-ink-soft mt-1">Stok tersedia: {formatKg(stokJenis.total_sisa_kg)}</p>
-            )}
+            />
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-3">
-          <div>
-            <Label htmlFor="total_kg">Berat dijual (kg)</Label>
-            <Input id="total_kg" name="total_kg" type="number" min={0} step="0.1" required />
+        <div className="rounded-xl border border-line bg-bg p-3">
+          <p className="text-xs font-medium text-ink-soft mb-2">Tambah jenis sampah ke daftar</p>
+          <div className="grid sm:grid-cols-4 gap-3">
+            <div className="sm:col-span-2">
+              <Label htmlFor="line_jenis">Jenis sampah</Label>
+              <Select id="line_jenis" value={lineJenisId} onChange={(e) => setLineJenisId(e.target.value)}>
+                <option value="" disabled>
+                  Pilih jenis
+                </option>
+                {stok.map((s) => (
+                  <option key={s.jenis_id} value={s.jenis_id}>
+                    {s.jenis_nama}
+                  </option>
+                ))}
+              </Select>
+              {sisaSetelahDikurangiKeranjang !== null && (
+                <p className="text-xs text-ink-soft mt-1">
+                  Sisa stok: {formatKg(sisaSetelahDikurangiKeranjang)}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="line_berat">Berat (kg)</Label>
+              <Input
+                id="line_berat"
+                type="number"
+                min={0}
+                step="0.1"
+                value={lineBerat}
+                onChange={(e) => setLineBerat(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="line_harga">
+                Harga {lineHargaMode === "per_kg" ? "/ kg" : "total"}
+              </Label>
+              <Input
+                id="line_harga"
+                type="number"
+                min={0}
+                step="1"
+                value={lineHarga}
+                onChange={(e) => setLineHarga(e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <Label>Cara input harga</Label>
+
+          <div className="flex flex-col gap-2 mt-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex gap-1.5">
               <button
                 type="button"
-                onClick={() => setHargaMode("per_kg")}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium border ${
-                  hargaMode === "per_kg"
+                onClick={() => setLineHargaMode("per_kg")}
+                className={`flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  lineHargaMode === "per_kg"
                     ? "bg-primary text-white border-primary"
                     : "bg-white border-line text-ink-soft"
                 }`}
               >
-                Per kg
+                Harga per kg
               </button>
               <button
                 type="button"
-                onClick={() => setHargaMode("total")}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium border ${
-                  hargaMode === "total"
+                onClick={() => setLineHargaMode("total")}
+                className={`flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  lineHargaMode === "total"
                     ? "bg-primary text-white border-primary"
                     : "bg-white border-line text-ink-soft"
                 }`}
@@ -99,25 +193,61 @@ export function PenjualanForm({ stok }: { stok: StokRingkas[] }) {
                 Total harga
               </button>
             </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="w-full sm:w-auto"
+              onClick={handleTambahKeDaftar}
+            >
+              <Plus size={14} /> Tambah ke daftar
+            </Button>
           </div>
-          {hargaMode === "per_kg" ? (
-            <div>
-              <Label htmlFor="harga_jual_per_kg">Harga jual / kg</Label>
-              <Input id="harga_jual_per_kg" name="harga_jual_per_kg" type="number" min={0} step="1" required />
-            </div>
-          ) : (
-            <div>
-              <Label htmlFor="total_pendapatan">Total harga jual</Label>
-              <Input id="total_pendapatan" name="total_pendapatan" type="number" min={0} step="1" required />
-            </div>
-          )}
+          {lineError && <p className="text-xs text-danger mt-2">{lineError}</p>}
         </div>
 
-        <Button type="submit" size="lg" className="w-full" loading={pending}>
-          {pending ? "Menyimpan..." : "Catat Penjualan"}
+        {items.length > 0 && (
+          <div className="space-y-2">
+            {items.map((item, idx) => (
+              <div
+                key={`${item.jenisId}-${idx}`}
+                className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-3 py-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{item.jenisNama}</p>
+                  <p className="text-xs text-ink-soft">{formatKg(item.berat)}</p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <p className="text-sm font-medium">{formatRupiah(item.totalHarga)}</p>
+                  <button
+                    type="button"
+                    onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
+                    className="text-ink-soft hover:text-danger"
+                    aria-label={`Hapus ${item.jenisNama} dari daftar`}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <div className="flex items-center justify-between rounded-xl bg-primary-soft px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <Badge>{items.length} jenis</Badge>
+                <span className="text-xs text-primary-ink">{formatKg(totalBerat)}</span>
+              </div>
+              <p className="font-display font-semibold text-sm text-primary-ink">
+                {formatRupiah(totalHarga)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <Button type="button" size="lg" className="w-full" loading={pending} onClick={handleSubmit}>
+          {pending ? "Menyimpan..." : `Catat Penjualan${items.length > 0 ? ` (${items.length} jenis)` : ""}`}
         </Button>
         {error && <p className="text-xs text-danger">{error}</p>}
-      </form>
+      </div>
     </Card>
   );
 }

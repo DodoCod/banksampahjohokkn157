@@ -1,15 +1,26 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { Plus } from "lucide-react";
 import { Button, Card, Input, Label, Select } from "@/components/ui/primitives";
+import { AddJenisModal } from "@/components/add-jenis-modal";
 import { addSetoranAction } from "@/app/actions/batch";
 import type { JenisSampah } from "@/types";
 
-export function SetoranForm({ batchId, jenisList }: { batchId: string; jenisList: JenisSampah[] }) {
+export function SetoranForm({
+  batchId,
+  jenisList: initialJenisList,
+}: {
+  batchId: string;
+  jenisList: JenisSampah[];
+}) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [jenisList, setJenisList] = useState(initialJenisList);
+  const [jenisId, setJenisId] = useState("");
   const [mode, setMode] = useState<"HIBAH" | "DIJUAL" | "SEBAGIAN">("HIBAH");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [addJenisOpen, setAddJenisOpen] = useState(false);
 
   const aktif = jenisList.filter((j) => j.aktif);
 
@@ -25,6 +36,7 @@ export function SetoranForm({ batchId, jenisList }: { batchId: string; jenisList
               await addSetoranAction(formData);
               formRef.current?.reset();
               setMode("HIBAH");
+              setJenisId("");
             } catch (e) {
               setError(e instanceof Error ? e.message : "Gagal menyimpan.");
             }
@@ -40,8 +52,25 @@ export function SetoranForm({ batchId, jenisList }: { batchId: string; jenisList
             <Input id="warga" name="warga" placeholder="Pak Budi" required />
           </div>
           <div>
-            <Label htmlFor="jenis_id">Jenis sampah</Label>
-            <Select id="jenis_id" name="jenis_id" required defaultValue="">
+            <div className="flex items-center justify-between mb-1">
+              <Label htmlFor="jenis_id" className="mb-0">
+                Jenis sampah
+              </Label>
+              <button
+                type="button"
+                onClick={() => setAddJenisOpen(true)}
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary-ink bg-primary-soft px-2 py-1 rounded-lg hover:bg-primary hover:text-white transition-colors"
+              >
+                <Plus size={12} strokeWidth={2.5} /> Jenis baru
+              </button>
+            </div>
+            <Select
+              id="jenis_id"
+              name="jenis_id"
+              required
+              value={jenisId}
+              onChange={(e) => setJenisId(e.target.value)}
+            >
               <option value="" disabled>
                 Pilih jenis
               </option>
@@ -63,7 +92,7 @@ export function SetoranForm({ batchId, jenisList }: { batchId: string; jenisList
                 type="button"
                 onClick={() => setMode(m)}
                 className={
-                  "px-3 py-1.5 rounded-md text-xs font-medium border " +
+                  "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors " +
                   (mode === m
                     ? "bg-primary text-white border-primary"
                     : "bg-white border-line text-ink-soft hover:bg-primary-soft")
@@ -116,6 +145,16 @@ export function SetoranForm({ batchId, jenisList }: { batchId: string; jenisList
         </Button>
         {error && <p className="text-xs text-danger">{error}</p>}
       </form>
+
+      <AddJenisModal
+        open={addJenisOpen}
+        onClose={() => setAddJenisOpen(false)}
+        onCreated={(item) => {
+          setJenisList((prev) => [...prev, item]);
+          setJenisId(item.id);
+          setAddJenisOpen(false);
+        }}
+      />
     </Card>
   );
 }
