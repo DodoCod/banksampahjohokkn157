@@ -72,8 +72,10 @@ export interface WargaSetoranInput {
 export interface PenjualanItemInput {
   jenisId: string;
   jenisNama: string;
-  berat: number;
+  berat: number; // berat hasil timbangan pengepul (dasar hitung pendapatan)
   totalHarga: number;
+  jualHabis: boolean; // true = stok jenis ini dianggap habis terjual (menampung selisih timbangan)
+  stokSaatDitambahkan?: number; // snapshot sisa stok saat item ditambahkan, hanya untuk info di UI
 }
 
 export interface StokRingkas {

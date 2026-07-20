@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import * as sheets from "@/services/sheets";
-import { hitungFifo } from "@/services/stock";
+import { habiskanStokJenis, hitungFifo } from "@/services/stock";
 import type { Pengumpulan } from "@/types";
 
 interface PenjualanItemPayload {
   jenisId: string;
   berat: number;
   totalHarga: number;
+  jualHabis?: boolean;
 }
 
 /**
@@ -20,6 +21,11 @@ interface PenjualanItemPayload {
  *  1. Hitung pemakaian stok FIFO per item secara berurutan, memakai salinan
  *     kerja dari data stok supaya item ke-2 dst. tidak memakai batch yang
  *     baru saja "dipakai" oleh item sebelumnya dalam transaksi yang sama.
+ *     Jika item ditandai `jualHabis`, SELURUH sisa stok jenis itu dianggap
+ *     habis (dipakai untuk kasus selisih timbangan pengepul vs catatan
+ *     internal), sementara pendapatan tetap dihitung dari berat yang
+ *     benar-benar dibayar pengepul — selisihnya otomatis mengurangi/menambah
+ *     laba transaksi ini.
  *  2. Tolak seluruh transaksi jika ada satu item saja yang stoknya tidak cukup
  *     (tidak ada penulisan apa pun terjadi).
  *  3. Tulis SATU baris Penjualan untuk keseluruhan transaksi (jenis_ids berisi
@@ -71,7 +77,10 @@ export async function createPenjualanAction(formData: FormData) {
     }
     if (item.totalHarga < 0) throw new Error("Harga tidak boleh negatif.");
 
-    const fifo = hitungFifo(item.jenisId, item.berat, working);
+    const fifo = item.jualHabis
+      ? habiskanStokJenis(item.jenisId, working)
+      : hitungFifo(item.jenisId, item.berat, working);
+
     if (!fifo.cukup) {
       throw new Error(
         `Stok ${jenis.nama} tidak cukup. Kekurangan ${fifo.kekurangan.toFixed(2)} kg.`
@@ -86,7 +95,10 @@ export async function createPenjualanAction(formData: FormData) {
     }
 
     semuaPemakaian.push(...fifo.pemakaian);
-    totalKg += fifo.totalTerambil;
+    // total_kg selalu memakai berat hasil timbangan pengepul (yang menentukan
+    // pendapatan), bukan berat stok yang dihabiskan — supaya "jual habis"
+    // dengan selisih timbangan tetap melaporkan kg yang sebenarnya terjual.
+    totalKg += item.berat;
     totalModal += fifo.totalModal;
     totalPendapatan += item.totalHarga;
     if (!jenisIdsTerjual.includes(item.jenisId)) jenisIdsTerjual.push(item.jenisId);

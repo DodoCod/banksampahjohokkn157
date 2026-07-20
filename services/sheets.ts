@@ -16,7 +16,16 @@ import type {
   Penjualan,
 } from "@/types";
 
-const num = (v: string | undefined) => (v ? Number(v) : 0);
+// Toleran terhadap sisa data lama yang sempat tersimpan dengan koma sebagai
+// pemisah desimal (mis. "2,2") akibat isu format locale Google Sheets yang
+// sudah diperbaiki di lib/sheets-client.ts. Kalau ada koma tapi tidak ada
+// titik, anggap koma itu pemisah desimal.
+const num = (v: string | undefined) => {
+  if (!v) return 0;
+  const normalized = v.includes(",") && !v.includes(".") ? v.replace(",", ".") : v;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 const bool = (v: string | undefined) => v === "true" || v === "TRUE" || v === "1";
 
 // ---------------- JenisSampah ----------------

@@ -12,18 +12,10 @@ export async function createJenisSampahAction(formData: FormData): Promise<Jenis
   if (!nama) throw new Error("Nama jenis sampah wajib diisi.");
   if (harga_beli < 0) throw new Error("Harga tidak boleh negatif.");
 
-  const payload = { nama, harga_beli, satuan, aktif: true };
-
-  // Simpan data ke Google Sheets / Database
-  const created = await sheets.createJenisSampah(payload);
-
+  const item = await sheets.createJenisSampah({ nama, harga_beli, satuan, aktif: true });
   revalidatePath("/jenis-sampah");
-
-  // Kembalikan data bertipe JenisSampah ke caller (UI)
-  return {
-    id: created?.id || Date.now().toString(),
-    ...payload,
-  };
+  revalidatePath("/batch");
+  return item;
 }
 
 export async function updateJenisSampahAction(formData: FormData) {

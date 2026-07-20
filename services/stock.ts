@@ -88,3 +88,31 @@ export function hitungFifo(
     kekurangan: Math.max(0, sisaDibutuhkan),
   };
 }
+
+/**
+ * Habiskan SELURUH sisa stok tercatat untuk satu jenis sampah, terlepas dari
+ * berapa kg yang sebenarnya dibayar pengepul.
+ *
+ * Dipakai untuk kasus "jual habis" — ketika hasil timbangan pengepul beda
+ * dengan catatan internal (misal karena cara menimbang, kelembapan, dll).
+ * Pendapatan tetap dihitung dari angka yang dibayar pengepul (lihat
+ * createPenjualanAction), sementara modal dihitung dari seluruh stok yang
+ * benar-benar habis — selisihnya otomatis mengurangi/menambah laba.
+ */
+export function habiskanStokJenis(jenisId: string, pengumpulan: Pengumpulan[]): FifoResult {
+  const tersedia = getStokTersedia(jenisId, pengumpulan);
+
+  const pemakaian: FifoPemakaian[] = tersedia.map((batchStok) => {
+    const modalPerKg = batchStok.berat > 0 ? batchStok.modal / batchStok.berat : 0;
+    return {
+      pengumpulan_id: batchStok.id,
+      berat: batchStok.sisa_berat,
+      modal: batchStok.sisa_berat * modalPerKg,
+    };
+  });
+
+  const totalTerambil = pemakaian.reduce((sum, p) => sum + p.berat, 0);
+  const totalModal = pemakaian.reduce((sum, p) => sum + p.modal, 0);
+
+  return { cukup: true, totalTerambil, totalModal, pemakaian, kekurangan: 0 };
+}

@@ -94,6 +94,10 @@ export async function readSheet(sheetName: SheetName): Promise<Record<string, st
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: getSpreadsheetId(),
     range: `${sheetName}!A2:${lastCol}`,
+    // UNFORMATTED_VALUE: kembalikan angka mentah (mis. 2.2), bukan teks yang
+    // sudah diformat sesuai bahasa/lokasi spreadsheet (mis. "2,2" di lokasi
+    // Indonesia) — itu yang sebelumnya bikin Number("2,2") jadi NaN.
+    valueRenderOption: "UNFORMATTED_VALUE",
   });
   const rows = res.data.values ?? [];
   return rows
@@ -101,7 +105,8 @@ export async function readSheet(sheetName: SheetName): Promise<Record<string, st
     .map((row) => {
       const obj: Record<string, string> = {};
       headers.forEach((h, i) => {
-        obj[h] = row[i] ?? "";
+        const cell = row[i];
+        obj[h] = cell === undefined || cell === null ? "" : String(cell);
       });
       return obj;
     });
@@ -113,7 +118,11 @@ export async function appendRow(sheetName: SheetName, values: (string | number)[
   await sheets.spreadsheets.values.append({
     spreadsheetId: getSpreadsheetId(),
     range: `${sheetName}!A:A`,
-    valueInputOption: "USER_ENTERED",
+    // RAW: simpan persis apa yang kita kirim, tanpa Sheets mencoba
+    // "menebak" tipe data (mis. mengubah teks tanggal ISO jadi tipe Tanggal
+    // internal / serial number, yang sebelumnya bikin tanggal batch salah
+    // kebaca seperti "01 Januari 46223").
+    valueInputOption: "RAW",
     insertDataOption: "INSERT_ROWS",
     requestBody: { values: [values] },
   });
@@ -126,7 +135,7 @@ export async function appendRows(sheetName: SheetName, rows: (string | number)[]
   await sheets.spreadsheets.values.append({
     spreadsheetId: getSpreadsheetId(),
     range: `${sheetName}!A:A`,
-    valueInputOption: "USER_ENTERED",
+    valueInputOption: "RAW",
     insertDataOption: "INSERT_ROWS",
     requestBody: { values: rows },
   });
@@ -138,9 +147,10 @@ async function findRowNumberById(sheetName: SheetName, id: string): Promise<numb
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: getSpreadsheetId(),
     range: `${sheetName}!A:A`,
+    valueRenderOption: "UNFORMATTED_VALUE",
   });
   const rows = res.data.values ?? [];
-  const idx = rows.findIndex((row) => row[0] === id);
+  const idx = rows.findIndex((row) => String(row[0] ?? "") === id);
   return idx === -1 ? null : idx + 1; // 1-indexed row number di spreadsheet
 }
 
@@ -158,7 +168,7 @@ export async function updateRowById(
   await sheets.spreadsheets.values.update({
     spreadsheetId: getSpreadsheetId(),
     range: `${sheetName}!A${rowNumber}:${lastCol}${rowNumber}`,
-    valueInputOption: "USER_ENTERED",
+    valueInputOption: "RAW",
     requestBody: { values: [values] },
   });
   return true;
@@ -180,14 +190,15 @@ export async function updatePartialById(
   const current = await sheets.spreadsheets.values.get({
     spreadsheetId: getSpreadsheetId(),
     range: `${sheetName}!A${rowNumber}:${lastCol}${rowNumber}`,
+    valueRenderOption: "UNFORMATTED_VALUE",
   });
   const currentRow = current.data.values?.[0] ?? [];
-  const merged = headers.map((h, i) => (h in partial ? partial[h] : currentRow[i] ?? ""));
+  const merged = headers.map((h, i) => (h in partial ? partial[h] : (currentRow[i] ?? "")));
 
   await sheets.spreadsheets.values.update({
     spreadsheetId: getSpreadsheetId(),
     range: `${sheetName}!A${rowNumber}:${lastCol}${rowNumber}`,
-    valueInputOption: "USER_ENTERED",
+    valueInputOption: "RAW",
     requestBody: { values: [merged] },
   });
   return true;
@@ -254,7 +265,7 @@ export async function ensureSheetsAndHeaders(): Promise<{ created: string[] }> {
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: `${name}!A1:${lastCol}1`,
-      valueInputOption: "USER_ENTERED",
+      valueInputOption: "RAW",
       requestBody: { values: [headers] },
     });
   }
