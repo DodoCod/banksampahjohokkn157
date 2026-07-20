@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import * as sheets from "@/services/sheets";
+import type { JenisSampah } from "@/types";
 
-export async function createJenisSampahAction(formData: FormData) {
+export async function createJenisSampahAction(formData: FormData): Promise<JenisSampah> {
   const nama = String(formData.get("nama") ?? "").trim();
   const harga_beli = Number(formData.get("harga_beli") ?? 0);
   const satuan = String(formData.get("satuan") ?? "kg").trim() || "kg";
@@ -11,8 +12,18 @@ export async function createJenisSampahAction(formData: FormData) {
   if (!nama) throw new Error("Nama jenis sampah wajib diisi.");
   if (harga_beli < 0) throw new Error("Harga tidak boleh negatif.");
 
-  await sheets.createJenisSampah({ nama, harga_beli, satuan, aktif: true });
+  const payload = { nama, harga_beli, satuan, aktif: true };
+
+  // Simpan data ke Google Sheets / Database
+  const created = await sheets.createJenisSampah(payload);
+
   revalidatePath("/jenis-sampah");
+
+  // Kembalikan data bertipe JenisSampah ke caller (UI)
+  return {
+    id: created?.id || Date.now().toString(),
+    ...payload,
+  };
 }
 
 export async function updateJenisSampahAction(formData: FormData) {

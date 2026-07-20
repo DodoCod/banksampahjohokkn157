@@ -39,8 +39,10 @@ export function AddJenisModal({
           startTransition(async () => {
             try {
               const item = await createJenisSampahAction(formData);
-              formRef.current?.reset();
-              onCreated(item);
+              if (item) {
+                formRef.current?.reset();
+                onCreated(item);
+              }
             } catch (e) {
               setError(e instanceof Error ? e.message : "Gagal menyimpan.");
             }
