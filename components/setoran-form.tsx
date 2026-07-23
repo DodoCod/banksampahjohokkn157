@@ -1,18 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Select } from "@/components/ui/primitives";
 import { AddJenisModal } from "@/components/add-jenis-modal";
 import { addSetoranBatchAction } from "@/app/actions/batch";
 import { formatKg, formatRupiah } from "@/lib/utils";
 import type { JenisSampah, SetoranItemInput } from "@/types";
-
-const MODE_LABEL: Record<SetoranItemInput["mode"], string> = {
-  HIBAH: "Hibah",
-  DIJUAL: "Dijual",
-  SEBAGIAN: "Sebagian",
-};
 
 export function SetoranForm({
   batchId,
@@ -26,11 +20,11 @@ export function SetoranForm({
   const [items, setItems] = useState<SetoranItemInput[]>([]);
 
   const [lineJenisId, setLineJenisId] = useState("");
-  const [lineMode, setLineMode] = useState<SetoranItemInput["mode"]>("HIBAH");
+  const [mode, setMode] = useState<"HIBAH" | "DIJUAL" | "SEBAGIAN">("HIBAH");
   const [lineBerat, setLineBerat] = useState("");
+  const [lineHargaBeli, setLineHargaBeli] = useState("");
   const [lineHibahKg, setLineHibahKg] = useState("");
   const [lineDijualKg, setLineDijualKg] = useState("");
-  const [lineHargaBeli, setLineHargaBeli] = useState("");
   const [lineError, setLineError] = useState<string | null>(null);
 
   const [error, setError] = useState<string | null>(null);
@@ -38,71 +32,72 @@ export function SetoranForm({
   const [addJenisOpen, setAddJenisOpen] = useState(false);
 
   const aktif = jenisList.filter((j) => j.aktif);
-  const jenisTerpilih = jenisList.find((j) => j.id === lineJenisId);
+  // Jenis yang sudah ada di keranjang tidak ditampilkan lagi di dropdown,
+  // supaya tidak dobel — kalau perlu tambah lagi untuk jenis yang sama,
+  // hapus dulu item lama di keranjang lalu tambahkan ulang dengan angka gabungan.
+  const jenisTersedia = aktif.filter((j) => !items.some((i) => i.jenisId === j.id));
 
-  const totalBerat = items.reduce((sum, i) => sum + i.berat, 0);
-  const totalModal = items.reduce((sum, i) => sum + i.modalPreview, 0);
+  const totalBerat = useMemo(() => items.reduce((sum, i) => sum + i.berat, 0), [items]);
+  const totalModal = useMemo(() => items.reduce((sum, i) => sum + i.modal, 0), [items]);
 
   function resetLine() {
     setLineJenisId("");
-    setLineMode("HIBAH");
+    setMode("HIBAH");
     setLineBerat("");
+    setLineHargaBeli("");
     setLineHibahKg("");
     setLineDijualKg("");
-    setLineHargaBeli("");
   }
 
   function handleTambahKeDaftar() {
     setLineError(null);
     const jenis = jenisList.find((j) => j.id === lineJenisId);
-
     if (!jenis) return setLineError("Pilih jenis sampah terlebih dahulu.");
 
-    const hargaOverride = lineHargaBeli !== "" ? Number(lineHargaBeli) : undefined;
-    const hargaEfektif = hargaOverride !== undefined ? hargaOverride : jenis.harga_beli;
+    const hargaBeliInput = lineHargaBeli !== "" ? Number(lineHargaBeli) : undefined;
+    const hargaBeliDipakai = hargaBeliInput ?? jenis.harga_beli;
 
-    if (lineMode !== "SEBAGIAN") {
+    if (mode === "HIBAH") {
       const berat = Number(lineBerat);
       if (!berat || berat <= 0) return setLineError("Berat harus lebih dari nol.");
-      if (lineMode === "DIJUAL" && hargaEfektif < 0) return setLineError("Harga tidak boleh negatif.");
-
+      setItems((prev) => [
+        ...prev,
+        { jenisId: jenis.id, jenisNama: jenis.nama, mode, berat, modal: 0 },
+      ]);
+    } else if (mode === "DIJUAL") {
+      const berat = Number(lineBerat);
+      if (!berat || berat <= 0) return setLineError("Berat harus lebih dari nol.");
+      if (hargaBeliDipakai < 0) return setLineError("Harga tidak boleh negatif.");
       setItems((prev) => [
         ...prev,
         {
           jenisId: jenis.id,
           jenisNama: jenis.nama,
-          mode: lineMode,
+          mode,
           berat,
-          hargaBeli: hargaOverride,
-          modalPreview: lineMode === "DIJUAL" ? berat * hargaEfektif : 0,
+          hargaBeli: hargaBeliInput,
+          modal: berat * hargaBeliDipakai,
         },
       ]);
     } else {
-      const berat = Number(lineBerat);
-      const hibahKg = Number(lineHibahKg || 0);
-      const dijualKg = Number(lineDijualKg || 0);
-      if (!berat || berat <= 0) return setLineError("Total berat harus lebih dari nol.");
-      if (hibahKg < 0 || dijualKg < 0) return setLineError("Berat harus lebih dari nol.");
-      if (Math.abs(hibahKg + dijualKg - berat) > 0.001) {
-        return setLineError("Total hibah + dijual harus sama dengan total berat setoran.");
-      }
-      if (hargaEfektif < 0) return setLineError("Harga tidak boleh negatif.");
-
+      const hibahKg = Number(lineHibahKg) || 0;
+      const dijualKg = Number(lineDijualKg) || 0;
+      if (hibahKg <= 0 && dijualKg <= 0) return setLineError("Isi minimal salah satu bagian.");
+      if (hargaBeliDipakai < 0) return setLineError("Harga tidak boleh negatif.");
       setItems((prev) => [
         ...prev,
         {
           jenisId: jenis.id,
           jenisNama: jenis.nama,
-          mode: lineMode,
-          berat,
+          mode,
+          berat: hibahKg + dijualKg,
+          hargaBeli: hargaBeliInput,
           hibahKg,
           dijualKg,
-          hargaBeli: hargaOverride,
-          modalPreview: dijualKg * hargaEfektif,
+          modal: dijualKg * hargaBeliDipakai,
         },
       ]);
     }
-
     resetLine();
   }
 
@@ -123,9 +118,9 @@ export function SetoranForm({
               jenisId: i.jenisId,
               mode: i.mode,
               berat: i.berat,
+              hargaBeli: i.hargaBeli,
               hibahKg: i.hibahKg,
               dijualKg: i.dijualKg,
-              hargaBeli: i.hargaBeli,
             }))
           )
         );
@@ -140,7 +135,7 @@ export function SetoranForm({
 
   return (
     <Card className="p-4 mb-6">
-      <p className="text-sm font-medium mb-3">Catat setoran warga</p>
+      <p className="text-sm font-medium mb-3">Tambah setoran warga</p>
 
       <div className="space-y-4">
         <div>
@@ -150,46 +145,35 @@ export function SetoranForm({
             placeholder="Pak Budi"
             value={warga}
             onChange={(e) => setWarga(e.target.value)}
+            required
           />
-          <p className="text-xs text-ink-soft mt-1">
-            Satu warga bisa menyetor beberapa jenis sampah sekaligus - tambahkan tiap jenis ke daftar di
-            bawah, baru simpan semuanya dalam satu kali submit.
-          </p>
         </div>
 
         <div className="rounded-xl border border-line bg-bg p-3">
           <p className="text-xs font-medium text-ink-soft mb-2">Tambah jenis sampah ke daftar</p>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="col-span-2">
-              <div className="flex items-center justify-between mb-1">
-                <Label htmlFor="line_jenis" className="mb-0">
-                  Jenis sampah
-                </Label>
-                <button
-                  type="button"
-                  onClick={() => setAddJenisOpen(true)}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-primary-ink bg-primary-soft px-2 py-1 rounded-lg hover:bg-primary hover:text-white transition-colors"
-                >
-                  <Plus size={12} strokeWidth={2.5} /> Jenis baru
-                </button>
-              </div>
-              <Select
-                id="line_jenis"
-                value={lineJenisId}
-                onChange={(e) => setLineJenisId(e.target.value)}
-              >
-                <option value="" disabled>
-                  Pilih jenis
-                </option>
-                {aktif.map((j) => (
-                  <option key={j.id} value={j.id}>
-                    {j.nama}
-                  </option>
-                ))}
-              </Select>
-            </div>
+          <div className="flex items-center justify-between mb-1">
+            <Label htmlFor="line_jenis" className="mb-0">
+              Jenis sampah
+            </Label>
+            <button
+              type="button"
+              onClick={() => setAddJenisOpen(true)}
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary-ink bg-primary-soft px-2 py-1 rounded-lg hover:bg-primary hover:text-white transition-colors"
+            >
+              <Plus size={12} strokeWidth={2.5} /> Jenis baru
+            </button>
           </div>
+          <Select id="line_jenis" value={lineJenisId} onChange={(e) => setLineJenisId(e.target.value)}>
+            <option value="" disabled>
+              Pilih jenis
+            </option>
+            {jenisTersedia.map((j) => (
+              <option key={j.id} value={j.id}>
+                {j.nama}
+              </option>
+            ))}
+          </Select>
 
           <div className="mt-3">
             <Label>Status</Label>
@@ -198,22 +182,21 @@ export function SetoranForm({
                 <button
                   key={m}
                   type="button"
-                  onClick={() => setLineMode(m)}
-                  className={
-                    "flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors " +
-                    (lineMode === m
+                  onClick={() => setMode(m)}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
+                    mode === m
                       ? "bg-primary text-white border-primary"
-                      : "bg-white border-line text-ink-soft hover:bg-primary-soft")
-                  }
+                      : "bg-white border-line text-ink-soft hover:bg-primary-soft"
+                  }`}
                 >
-                  {MODE_LABEL[m]}
+                  {m === "HIBAH" ? "Hibah" : m === "DIJUAL" ? "Dijual" : "Sebagian"}
                 </button>
               ))}
             </div>
           </div>
 
-          {lineMode !== "SEBAGIAN" ? (
-            <div className="grid grid-cols-2 gap-3 mt-3">
+          {mode !== "SEBAGIAN" ? (
+            <div className="grid sm:grid-cols-2 gap-3 mt-3">
               <div>
                 <Label htmlFor="line_berat">Berat (kg)</Label>
                 <Input
@@ -225,15 +208,14 @@ export function SetoranForm({
                   onChange={(e) => setLineBerat(e.target.value)}
                 />
               </div>
-              {lineMode === "DIJUAL" && (
+              {mode === "DIJUAL" && (
                 <div>
-                  <Label htmlFor="line_harga">Harga beli / kg</Label>
+                  <Label htmlFor="line_harga">Harga beli/kg (kosongkan = harga master)</Label>
                   <Input
                     id="line_harga"
                     type="number"
                     min={0}
                     step="1"
-                    placeholder={jenisTerpilih ? `${jenisTerpilih.harga_beli}` : "harga master"}
                     value={lineHargaBeli}
                     onChange={(e) => setLineHargaBeli(e.target.value)}
                   />
@@ -241,22 +223,11 @@ export function SetoranForm({
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+            <div className="grid sm:grid-cols-2 gap-3 mt-3">
               <div>
-                <Label htmlFor="line_berat_total">Total berat (kg)</Label>
+                <Label htmlFor="line_hibah">Bagian hibah (kg)</Label>
                 <Input
-                  id="line_berat_total"
-                  type="number"
-                  min={0}
-                  step="0.1"
-                  value={lineBerat}
-                  onChange={(e) => setLineBerat(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="line_hibah_kg">Bagian hibah (kg)</Label>
-                <Input
-                  id="line_hibah_kg"
+                  id="line_hibah"
                   type="number"
                   min={0}
                   step="0.1"
@@ -265,9 +236,9 @@ export function SetoranForm({
                 />
               </div>
               <div>
-                <Label htmlFor="line_dijual_kg">Bagian dijual (kg)</Label>
+                <Label htmlFor="line_dijual">Bagian dijual (kg)</Label>
                 <Input
-                  id="line_dijual_kg"
+                  id="line_dijual"
                   type="number"
                   min={0}
                   step="0.1"
@@ -275,14 +246,15 @@ export function SetoranForm({
                   onChange={(e) => setLineDijualKg(e.target.value)}
                 />
               </div>
-              <div className="col-span-2 sm:col-span-3">
-                <Label htmlFor="line_harga2">Harga beli / kg untuk bagian dijual (kosongkan = harga master)</Label>
+              <div className="sm:col-span-2">
+                <Label htmlFor="line_harga_sebagian">
+                  Harga beli/kg untuk bagian dijual (kosongkan = harga master)
+                </Label>
                 <Input
-                  id="line_harga2"
+                  id="line_harga_sebagian"
                   type="number"
                   min={0}
                   step="1"
-                  placeholder={jenisTerpilih ? `${jenisTerpilih.harga_beli}` : "harga master"}
                   value={lineHargaBeli}
                   onChange={(e) => setLineHargaBeli(e.target.value)}
                 />
@@ -294,7 +266,7 @@ export function SetoranForm({
             type="button"
             size="sm"
             variant="secondary"
-            className="w-full mt-3"
+            className="w-full sm:w-auto mt-3"
             onClick={handleTambahKeDaftar}
           >
             <Plus size={14} /> Tambah ke daftar
@@ -305,32 +277,38 @@ export function SetoranForm({
         {items.length > 0 && (
           <div className="space-y-2">
             {items.map((item, idx) => (
-              <div key={`${item.jenisId}-${idx}`} className="rounded-xl border border-line bg-surface px-3 py-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{item.jenisNama}</p>
-                    <p className="text-xs text-ink-soft">{formatKg(item.berat)}</p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Badge tone={item.mode === "DIJUAL" ? "amber" : "primary"}>{MODE_LABEL[item.mode]}</Badge>
-                    <button
-                      type="button"
-                      onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-ink-soft hover:text-danger p-1 -m-1"
-                      aria-label={`Hapus ${item.jenisNama} dari daftar`}
-                    >
-                      <Trash2 size={15} />
-                    </button>
+              <div
+                key={`${item.jenisId}-${idx}`}
+                className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-3 py-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{item.jenisNama}</p>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    {item.mode === "SEBAGIAN" ? (
+                      <>
+                        <Badge tone="primary">Hibah {formatKg(item.hibahKg ?? 0)}</Badge>
+                        <Badge tone="amber">Dijual {formatKg(item.dijualKg ?? 0)}</Badge>
+                      </>
+                    ) : (
+                      <Badge tone={item.mode === "HIBAH" ? "primary" : "amber"}>
+                        {item.mode === "HIBAH" ? "Hibah" : "Dijual"} · {formatKg(item.berat)}
+                      </Badge>
+                    )}
                   </div>
                 </div>
-                {item.mode === "SEBAGIAN" && (
-                  <p className="text-xs text-ink-soft mt-1.5">
-                    Hibah {formatKg(item.hibahKg ?? 0)} · Dijual {formatKg(item.dijualKg ?? 0)}
-                  </p>
-                )}
-                {item.modalPreview > 0 && (
-                  <p className="text-xs text-ink-soft mt-1">Modal {formatRupiah(item.modalPreview)}</p>
-                )}
+                <div className="flex items-center gap-3 shrink-0">
+                  {item.modal > 0 && (
+                    <p className="text-sm font-medium">{formatRupiah(item.modal)}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
+                    className="text-ink-soft hover:text-danger"
+                    aria-label={`Hapus ${item.jenisNama} dari daftar`}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
             ))}
 
@@ -339,15 +317,15 @@ export function SetoranForm({
                 <Badge>{items.length} jenis</Badge>
                 <span className="text-xs text-primary-ink">{formatKg(totalBerat)}</span>
               </div>
-              <p className="font-display font-semibold text-sm text-primary-ink">{formatRupiah(totalModal)}</p>
+              <p className="font-display font-semibold text-sm text-primary-ink">
+                Modal {formatRupiah(totalModal)}
+              </p>
             </div>
           </div>
         )}
 
         <Button type="button" size="lg" className="w-full" loading={pending} onClick={handleSubmit}>
-          {pending
-            ? "Menyimpan..."
-            : `Simpan Setoran${items.length > 0 ? ` (${items.length} jenis)` : ""}`}
+          {pending ? "Menyimpan..." : `Tambah Setoran${items.length > 0 ? ` (${items.length} jenis)` : ""}`}
         </Button>
         {error && <p className="text-xs text-danger">{error}</p>}
       </div>

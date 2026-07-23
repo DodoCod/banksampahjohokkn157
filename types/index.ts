@@ -73,11 +73,11 @@ export interface SetoranItemInput {
   jenisId: string;
   jenisNama: string;
   mode: "HIBAH" | "DIJUAL" | "SEBAGIAN";
-  berat: number; // total berat baris ini (utk HIBAH/DIJUAL) atau total setoran utk SEBAGIAN
-  hibahKg?: number; // hanya untuk mode SEBAGIAN
-  dijualKg?: number; // hanya untuk mode SEBAGIAN
-  hargaBeli?: number; // override harga beli/kg, kosong = pakai harga master jenis sampah
-  modalPreview: number; // estimasi modal baris ini, hanya untuk tampilan di daftar
+  berat: number; // total berat item ini (untuk tampilan ringkas di keranjang)
+  hargaBeli?: number; // override harga beli untuk bagian DIJUAL/SEBAGIAN
+  hibahKg?: number; // dipakai kalau mode SEBAGIAN
+  dijualKg?: number; // dipakai kalau mode SEBAGIAN
+  modal: number; // modal hasil hitung di client, untuk preview di keranjang
 }
 
 export interface PenjualanItemInput {

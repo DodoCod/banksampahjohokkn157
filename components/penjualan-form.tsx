@@ -32,6 +32,20 @@ export function PenjualanForm({ stok }: { stok: StokRingkas[] }) {
     return map;
   }, [items]);
 
+  // Jenis yang sudah masuk keranjang atau sudah habis stoknya (setelah
+  // dikurangi item lain di keranjang) tidak ditampilkan lagi di dropdown —
+  // supaya tidak dobel dan tidak salah pilih jenis yang sudah tidak ada stok.
+  const jenisTersedia = useMemo(
+    () =>
+      stok.filter((s) => {
+        const sudahDiKeranjang = items.some((i) => i.jenisId === s.jenis_id);
+        if (sudahDiKeranjang) return false;
+        const sisa = s.total_sisa_kg - (beratTerpakaiPerJenis.get(s.jenis_id) ?? 0);
+        return sisa > 0.0001;
+      }),
+    [stok, items, beratTerpakaiPerJenis]
+  );
+
   const stokJenis = stok.find((s) => s.jenis_id === lineJenisId);
   const sisaSetelahDikurangiKeranjang = stokJenis
     ? Math.max(0, stokJenis.total_sisa_kg - (beratTerpakaiPerJenis.get(lineJenisId) ?? 0))
@@ -145,105 +159,122 @@ export function PenjualanForm({ stok }: { stok: StokRingkas[] }) {
 
         <div className="rounded-xl border border-line bg-bg p-3">
           <p className="text-xs font-medium text-ink-soft mb-2">Tambah jenis sampah ke daftar</p>
-          <div className="grid sm:grid-cols-4 gap-3">
-            <div className="sm:col-span-2">
-              <Label htmlFor="line_jenis">Jenis sampah</Label>
-              <Select id="line_jenis" value={lineJenisId} onChange={(e) => setLineJenisId(e.target.value)}>
-                <option value="" disabled>
-                  Pilih jenis
-                </option>
-                {stok.map((s) => (
-                  <option key={s.jenis_id} value={s.jenis_id}>
-                    {s.jenis_nama}
-                  </option>
-                ))}
-              </Select>
-              {sisaSetelahDikurangiKeranjang !== null && (
-                <p className="text-xs text-ink-soft mt-1">
-                  Sisa stok tercatat: {formatKg(sisaSetelahDikurangiKeranjang)}
+
+          {jenisTersedia.length === 0 ? (
+            <p className="text-xs text-ink-soft py-1">
+              Semua jenis dengan stok sudah masuk ke daftar, atau belum ada stok tersisa sama sekali.
+            </p>
+          ) : (
+            <>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="line_jenis">Jenis sampah</Label>
+                  <Select
+                    id="line_jenis"
+                    value={lineJenisId}
+                    onChange={(e) => setLineJenisId(e.target.value)}
+                  >
+                    <option value="" disabled>
+                      Pilih jenis
+                    </option>
+                    {jenisTersedia.map((s) => (
+                      <option key={s.jenis_id} value={s.jenis_id}>
+                        {s.jenis_nama}
+                      </option>
+                    ))}
+                  </Select>
+                  {sisaSetelahDikurangiKeranjang !== null && (
+                    <p className="text-xs text-ink-soft mt-1">
+                      Sisa stok tercatat: {formatKg(sisaSetelahDikurangiKeranjang)}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="line_berat">Berat timbangan (kg)</Label>
+                    <Input
+                      id="line_berat"
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={lineBerat}
+                      onChange={(e) => setLineBerat(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="line_harga">
+                      Harga {lineHargaMode === "per_kg" ? "/ kg" : "total"}
+                    </Label>
+                    <Input
+                      id="line_harga"
+                      type="number"
+                      min={0}
+                      step="1"
+                      value={lineHarga}
+                      onChange={(e) => setLineHarga(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <label className="flex items-start gap-2 mt-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={lineJualHabis}
+                  onChange={(e) => setLineJualHabis(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded accent-primary shrink-0"
+                />
+                <span className="text-xs text-ink-soft">
+                  Jenis ini terjual habis dari stok (ada selisih timbangan dengan pengepul)
+                </span>
+              </label>
+              {lineJualHabis && stokJenis && (
+                <p className="flex items-center gap-1.5 text-xs text-amber-600 mt-1.5">
+                  <AlertTriangle size={12} className="shrink-0" /> Seluruh stok tercatat (
+                  {formatKg(sisaSetelahDikurangiKeranjang ?? 0)}) akan dianggap habis, terlepas dari
+                  berat yang kamu isi di atas.
                 </p>
               )}
-            </div>
-            <div>
-              <Label htmlFor="line_berat">Berat timbangan pengepul (kg)</Label>
-              <Input
-                id="line_berat"
-                type="number"
-                min={0}
-                step="0.1"
-                value={lineBerat}
-                onChange={(e) => setLineBerat(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="line_harga">
-                Harga {lineHargaMode === "per_kg" ? "/ kg" : "total"}
-              </Label>
-              <Input
-                id="line_harga"
-                type="number"
-                min={0}
-                step="1"
-                value={lineHarga}
-                onChange={(e) => setLineHarga(e.target.value)}
-              />
-            </div>
-          </div>
 
-          <label className="flex items-start gap-2 mt-3 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={lineJualHabis}
-              onChange={(e) => setLineJualHabis(e.target.checked)}
-              className="w-4 h-4 mt-0.5 rounded accent-primary shrink-0"
-            />
-            <span className="text-xs text-ink-soft">
-              Jenis ini terjual habis dari stok (ada selisih timbangan dengan pengepul)
-            </span>
-          </label>
-          {lineJualHabis && stokJenis && (
-            <p className="flex items-center gap-1.5 text-xs text-amber-600 mt-1.5">
-              <AlertTriangle size={12} /> Seluruh stok tercatat ({formatKg(sisaSetelahDikurangiKeranjang ?? 0)})
-              akan dianggap habis, terlepas dari berat yang kamu isi di atas.
-            </p>
+              <div className="flex flex-col gap-2 mt-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setLineHargaMode("per_kg")}
+                    className={`flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                      lineHargaMode === "per_kg"
+                        ? "bg-primary text-white border-primary"
+                        : "bg-white border-line text-ink-soft"
+                    }`}
+                  >
+                    Harga per kg
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLineHargaMode("total")}
+                    className={`flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                      lineHargaMode === "total"
+                        ? "bg-primary text-white border-primary"
+                        : "bg-white border-line text-ink-soft"
+                    }`}
+                  >
+                    Total harga
+                  </button>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                  onClick={handleTambahKeDaftar}
+                >
+                  <Plus size={14} /> Tambah ke daftar
+                </Button>
+              </div>
+              {lineError && <p className="text-xs text-danger mt-2">{lineError}</p>}
+            </>
           )}
-
-          <div className="flex flex-col gap-2 mt-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => setLineHargaMode("per_kg")}
-                className={`flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                  lineHargaMode === "per_kg"
-                    ? "bg-primary text-white border-primary"
-                    : "bg-white border-line text-ink-soft"
-                }`}
-              >
-                Harga per kg
-              </button>
-              <button
-                type="button"
-                onClick={() => setLineHargaMode("total")}
-                className={`flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                  lineHargaMode === "total"
-                    ? "bg-primary text-white border-primary"
-                    : "bg-white border-line text-ink-soft"
-                }`}
-              >
-                Total harga
-              </button>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="w-full sm:w-auto"
-              onClick={handleTambahKeDaftar}
-            >
-              <Plus size={14} /> Tambah ke daftar
-            </Button>
-          </div>
-          {lineError && <p className="text-xs text-danger mt-2">{lineError}</p>}
         </div>
 
         {items.length > 0 && (

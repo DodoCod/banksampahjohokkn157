@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as sheets from "@/services/sheets";
-import type { Pengumpulan } from "@/types";
 
 export async function createBatchAction(formData: FormData) {
   const tanggal = String(formData.get("tanggal") ?? "");
@@ -33,27 +32,14 @@ export async function deleteBatchAction(formData: FormData) {
   redirect("/batch");
 }
 
-interface SetoranItemPayload {
-  jenisId: string;
-  mode: "HIBAH" | "DIJUAL" | "SEBAGIAN";
-  berat: number;
-  hibahKg?: number;
-  dijualKg?: number;
-  hargaBeli?: number;
-}
-
 /**
- * Tambah setoran satu warga sekaligus untuk beberapa jenis sampah — mengikuti
- * pola yang sama dengan model Penjualan (kumpulkan dulu jadi daftar/keranjang
- * di form untuk satu warga, baru kirim semua sekaligus dalam satu submit).
- * Warga hanya diisi sekali (mirip `pengepul` di Penjualan), lalu jenis sampah
- * bisa ditambahkan berkali-kali ke keranjang untuk warga yang sama.
+ * Tambah beberapa setoran sekaligus untuk satu warga dalam satu kali submit
+ * (model "keranjang", sama seperti halaman Penjualan). Tiap jenis sampah
+ * tetap dicatat sebagai baris Pengumpulan-nya sendiri dengan id masing-masing
+ * — keranjang ini cuma menyatukan pengiriman form-nya, bukan datanya.
  *
- * Bedanya dengan Penjualan: setiap item TIDAK digabung jadi satu baris.
- * Tiap item (per jenis sampah) tetap ditulis sebagai baris Pengumpulan-nya
- * sendiri dengan id yang berbeda, karena stok FIFO & sisa per baris harus
- * dilacak terpisah. Mode SEBAGIAN pada satu item tetap dipecah lagi menjadi
- * 2 baris: HIBAH + BELI (PRD bagian 5).
+ * Tiap item mendukung 3 mode sesuai PRD bagian 5: HIBAH, DIJUAL, atau
+ * SEBAGIAN (dipecah menjadi 2 baris: HIBAH + BELI).
  */
 export async function addSetoranBatchAction(formData: FormData) {
   const batch_id = String(formData.get("batch_id") ?? "");
@@ -62,6 +48,15 @@ export async function addSetoranBatchAction(formData: FormData) {
 
   if (!batch_id) throw new Error("Batch tidak ditemukan.");
   if (!warga) throw new Error("Nama warga wajib diisi.");
+
+  interface SetoranItemPayload {
+    jenisId: string;
+    mode: "HIBAH" | "DIJUAL" | "SEBAGIAN";
+    berat: number;
+    hargaBeli?: number;
+    hibahKg?: number;
+    dijualKg?: number;
+  }
 
   let items: SetoranItemPayload[];
   try {
@@ -76,16 +71,23 @@ export async function addSetoranBatchAction(formData: FormData) {
   const jenisList = await sheets.listJenisSampah();
   const jenisMap = new Map(jenisList.map((j) => [j.id, j]));
 
-  const rows: Omit<Pengumpulan, "id" | "created_at">[] = [];
+  const rows: {
+    batch_id: string;
+    warga: string;
+    jenis_id: string;
+    berat: number;
+    tipe: "HIBAH" | "BELI";
+    harga_beli: number;
+    modal: number;
+    sisa_berat: number;
+  }[] = [];
 
   for (const item of items) {
     const jenis = jenisMap.get(item.jenisId);
     if (!jenis) throw new Error("Salah satu jenis sampah pada daftar tidak valid.");
 
     const hargaBeli =
-      item.hargaBeli !== undefined && item.hargaBeli !== null && !Number.isNaN(item.hargaBeli)
-        ? item.hargaBeli
-        : jenis.harga_beli;
+      item.hargaBeli !== undefined && item.hargaBeli !== null ? item.hargaBeli : jenis.harga_beli;
 
     if (item.mode === "HIBAH") {
       if (!item.berat || item.berat <= 0) {
@@ -120,13 +122,13 @@ export async function addSetoranBatchAction(formData: FormData) {
       // SEBAGIAN: dipecah menjadi 2 baris terpisah (PRD bagian 5 & catatan implementasi)
       const hibahKg = item.hibahKg ?? 0;
       const dijualKg = item.dijualKg ?? 0;
-      if (hibahKg < 0 || dijualKg < 0) {
+      if (hibahKg < 0 || dijualKg < 0) throw new Error("Berat harus lebih dari nol.");
+      if (hibahKg === 0 && dijualKg === 0) {
         throw new Error(`Berat untuk ${jenis.nama} harus lebih dari nol.`);
       }
       if (Math.abs(hibahKg + dijualKg - item.berat) > 0.001) {
-        throw new Error(`Total hibah + dijual untuk ${jenis.nama} harus sama dengan total berat setoran.`);
+        throw new Error(`Total hibah + dijual untuk ${jenis.nama} harus sama dengan total berat.`);
       }
-      if (hargaBeli < 0) throw new Error("Harga tidak boleh negatif.");
       if (hibahKg > 0) {
         rows.push({
           batch_id,
@@ -153,8 +155,6 @@ export async function addSetoranBatchAction(formData: FormData) {
       }
     }
   }
-
-  if (rows.length === 0) throw new Error("Tidak ada setoran valid untuk disimpan.");
 
   await sheets.createPengumpulanRows(rows);
 
