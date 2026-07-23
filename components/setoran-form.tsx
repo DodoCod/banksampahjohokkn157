@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Lock, Plus, Trash2 } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Select } from "@/components/ui/primitives";
 import { AddJenisModal } from "@/components/add-jenis-modal";
 import { addSetoranBatchAction } from "@/app/actions/batch";
@@ -11,9 +11,12 @@ import type { JenisSampah, SetoranItemInput } from "@/types";
 export function SetoranForm({
   batchId,
   jenisList: initialJenisList,
+  locked = false,
 }: {
   batchId: string;
   jenisList: JenisSampah[];
+  /** true kalau sebagian sampah di batch ini sudah terjual — setoran baru dikunci. */
+  locked?: boolean;
 }) {
   const [jenisList, setJenisList] = useState(initialJenisList);
   const [warga, setWarga] = useState("");
@@ -131,6 +134,23 @@ export function SetoranForm({
         setError(e instanceof Error ? e.message : "Gagal menyimpan.");
       }
     });
+  }
+
+  if (locked) {
+    return (
+      <Card className="p-4 mb-6 flex items-start gap-3">
+        <div className="w-9 h-9 rounded-full bg-bg flex items-center justify-center shrink-0">
+          <Lock size={16} className="text-ink-soft" strokeWidth={2} />
+        </div>
+        <div>
+          <p className="text-sm font-medium">Setoran baru tidak bisa ditambahkan</p>
+          <p className="text-xs text-ink-soft mt-1">
+            Sebagian sampah di batch ini sudah terjual ke pengepul, jadi stok batch ini tidak bisa
+            diubah lagi. Buat batch baru untuk setoran berikutnya.
+          </p>
+        </div>
+      </Card>
+    );
   }
 
   return (

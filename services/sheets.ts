@@ -114,6 +114,20 @@ export async function listPengumpulanByBatch(batchId: string): Promise<Pengumpul
   return rows.filter((p) => p.batch_id === batchId);
 }
 
+/**
+ * true jika minimal 1 baris Pengumpulan pada batch ini sudah pernah terjual
+ * (muncul di DetailPenjualan). Dipakai untuk mengunci batch: tidak boleh
+ * dihapus, dan tidak boleh ditambah setoran baru lagi.
+ */
+export async function isBatchSudahDijual(batchId: string): Promise<boolean> {
+  const [pengumpulanBatch, detail] = await Promise.all([
+    listPengumpulanByBatch(batchId),
+    listDetailPenjualan(),
+  ]);
+  const idsPengumpulan = new Set(pengumpulanBatch.map((p) => p.id));
+  return detail.some((d) => idsPengumpulan.has(d.pengumpulan_id));
+}
+
 export async function createPengumpulanRows(
   rows: Omit<Pengumpulan, "id" | "created_at">[]
 ): Promise<Pengumpulan[]> {

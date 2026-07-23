@@ -10,6 +10,7 @@ import {
   Td,
   Th,
 } from "@/components/ui/primitives";
+import { ClickableRow } from "@/components/clickable-row";
 import { ConfigNotice } from "@/components/config-notice";
 import { BatchForm } from "@/components/batch-form";
 import * as sheets from "@/services/sheets";
@@ -86,26 +87,20 @@ export default async function BatchPage() {
                 <Th>Keterangan</Th>
                 <Th>Warga</Th>
                 <Th>Total kg</Th>
-                <Th></Th>
               </tr>
             </thead>
             <tbody>
               {batches.map((b) => {
                 const agg = jumlahPerBatch.get(b.id);
                 return (
-                  <tr key={b.id}>
+                  <ClickableRow key={b.id} href={`/batch/${b.id}`}>
                     <Td className="font-medium">{formatTanggal(b.tanggal)}</Td>
                     <Td>{b.keterangan || <span className="text-ink-soft">-</span>}</Td>
                     <Td>
                       <Badge>{agg?.warga.size ?? 0} warga</Badge>
                     </Td>
                     <Td>{(agg?.kg ?? 0).toFixed(1)} kg</Td>
-                    <Td className="text-right">
-                      <Link href={`/batch/${b.id}`} className="text-sm text-primary-ink hover:underline">
-                        Detail →
-                      </Link>
-                    </Td>
-                  </tr>
+                  </ClickableRow>
                 );
               })}
             </tbody>

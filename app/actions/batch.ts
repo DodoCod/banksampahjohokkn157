@@ -18,12 +18,7 @@ export async function deleteBatchAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("ID tidak ditemukan.");
 
-  const pengumpulan = await sheets.listPengumpulanByBatch(id);
-  const detail = await sheets.listDetailPenjualan();
-  const idsPengumpulan = new Set(pengumpulan.map((p) => p.id));
-  const sudahDijual = detail.some((d) => idsPengumpulan.has(d.pengumpulan_id));
-
-  if (sudahDijual) {
+  if (await sheets.isBatchSudahDijual(id)) {
     throw new Error("Tidak bisa menghapus batch yang sudah pernah dijual.");
   }
 
@@ -48,6 +43,12 @@ export async function addSetoranBatchAction(formData: FormData) {
 
   if (!batch_id) throw new Error("Batch tidak ditemukan.");
   if (!warga) throw new Error("Nama warga wajib diisi.");
+
+  if (await sheets.isBatchSudahDijual(batch_id)) {
+    throw new Error(
+      "Batch ini sudah punya sampah yang terjual ke pengepul, jadi tidak bisa ditambah setoran baru lagi."
+    );
+  }
 
   interface SetoranItemPayload {
     jenisId: string;

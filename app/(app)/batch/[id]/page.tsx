@@ -24,12 +24,13 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
   const { id } = await params;
 
   const result = await safeLoad(async () => {
-    const [batch, jenisList, pengumpulan] = await Promise.all([
+    const [batch, jenisList, pengumpulan, sudahDijual] = await Promise.all([
       sheets.getBatch(id),
       sheets.listJenisSampah(),
       sheets.listPengumpulanByBatch(id),
+      sheets.isBatchSudahDijual(id),
     ]);
-    return { batch, jenisList, pengumpulan };
+    return { batch, jenisList, pengumpulan, sudahDijual };
   });
 
   if (!result.ok) {
@@ -41,7 +42,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
     );
   }
 
-  const { batch, jenisList, pengumpulan } = result.data;
+  const { batch, jenisList, pengumpulan, sudahDijual } = result.data;
   if (!batch) notFound();
 
   const jenisMap = new Map(jenisList.map((j) => [j.id, j]));
@@ -78,7 +79,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
         )}
       </div>
 
-      <SetoranForm batchId={batch.id} jenisList={jenisList} />
+      <SetoranForm batchId={batch.id} jenisList={jenisList} locked={sudahDijual} />
 
       {pengumpulan.length === 0 ? (
         <EmptyState
