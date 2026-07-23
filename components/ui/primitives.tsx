@@ -167,6 +167,7 @@ export function EmptyState({ title, description }: { title: string; description?
 }
 
 /** Baris data bergaya kartu, dipakai sebagai tampilan mobile untuk daftar yang di desktop berupa tabel. */
+/** Baris data bergaya kartu, dipakai sebagai tampilan mobile untuk daftar yang di desktop berupa tabel. */
 export function ListCard({
   title,
   subtitle,
@@ -185,26 +186,57 @@ export function ListCard({
   action?: ReactNode;
 }) {
   return (
-    <Card className="p-4 flex items-center justify-between gap-3">
-      <div className="min-w-0">
-        <p className="font-medium text-sm truncate">{title}</p>
-        {subtitle && <p className="text-xs text-ink-soft mt-0.5 truncate">{subtitle}</p>}
-        {extra && <div className="mt-1.5">{extra}</div>}
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <div className="text-right">
-          {badge && <div className="mb-1 flex justify-end">{badge}</div>}
-          {right && <p className="font-display font-semibold text-sm">{right}</p>}
-          {rightSub && <p className="text-xs text-ink-soft mt-0.5">{rightSub}</p>}
+    <Card className="w-full p-4">
+      <div className="flex items-start justify-between gap-4">
+        {/* Kiri */}
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm">{title}</p>
+
+          {subtitle && (
+            <p className="mt-1 text-xs text-ink-soft break-words">
+              {subtitle}
+            </p>
+          )}
+
+          {extra && <div className="mt-2">{extra}</div>}
         </div>
-        {action}
+
+        {/* Kanan */}
+        <div className="flex flex-col items-end text-right shrink-0">
+          {badge && <div className="mb-1">{badge}</div>}
+
+          {right && (
+            <p className="font-display font-semibold text-sm whitespace-nowrap">
+              {right}
+            </p>
+          )}
+
+          {rightSub && (
+            <p className="mt-0.5 text-xs text-ink-soft whitespace-nowrap">
+              {rightSub}
+            </p>
+          )}
+
+          {action && <div className="mt-2">{action}</div>}
+        </div>
       </div>
     </Card>
   );
 }
 
-export function ListCardGrid({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("grid gap-2.5 md:hidden", className)} {...props} />;
+export function ListCardGrid({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn(
+        "mt-6 flex flex-col gap-4 w-full md:hidden",
+        className
+      )}
+      {...props}
+    />
+  );
 }
 
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
