@@ -31,6 +31,49 @@ const compactNumber = new Intl.NumberFormat("id-ID", {
 
 const tickStyle = { fontSize: 11, fill: AXIS_TEXT };
 
+// Lebar area label sumbu Y untuk chart horizontal "Jenis sampah terbanyak".
+const CATEGORY_AXIS_WIDTH = 70;
+
+/**
+ * Recharts secara default rata-kanan-kan label sumbu Y (nempel ke garis
+ * chart). Tick kustom ini geser teksnya supaya rata kiri di dalam area
+ * label yang sama (lebih enak dibaca untuk daftar nama jenis sampah), dan
+ * memecah label 2 kata atau lebih jadi 2 baris supaya lebih ringkas.
+ */
+function LeftAlignedCategoryTick(props: {
+  x?: string | number;
+  y?: string | number;
+  payload?: { value?: string };
+}) {
+  const { x = 0, y = 0, payload } = props;
+  const label = (payload?.value ?? "").trim();
+  const words = label.split(/\s+/).filter(Boolean);
+
+  const lines =
+    words.length >= 2
+      ? [
+          words.slice(0, Math.ceil(words.length / 2)).join(" "),
+          words.slice(Math.ceil(words.length / 2)).join(" "),
+        ]
+      : [label];
+
+  const textX = -CATEGORY_AXIS_WIDTH + 4;
+  const lineHeight = 13;
+  const firstLineDy = lines.length > 1 ? 4 - lineHeight / 2 : 4;
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={textX} textAnchor="start" fontSize={11} fill={AXIS_TEXT}>
+        {lines.map((line, i) => (
+          <tspan key={i} x={textX} dy={i === 0 ? firstLineDy : lineHeight}>
+            {line}
+          </tspan>
+        ))}
+      </text>
+    </g>
+  );
+}
+
 export function DashboardCharts({ data }: { data: DashboardSummary }) {
   return (
     <div className="grid md:grid-cols-2 gap-4">
@@ -109,7 +152,7 @@ export function DashboardCharts({ data }: { data: DashboardSummary }) {
 
       <Card className="p-4 md:col-span-2">
         <p className="text-sm font-medium mb-3">Jenis sampah terbanyak (kg terkumpul)</p>
-        <div className="h-56">
+        <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data.jenisTerbanyak}
@@ -128,10 +171,10 @@ export function DashboardCharts({ data }: { data: DashboardSummary }) {
               <YAxis
                 dataKey="nama"
                 type="category"
-                tick={tickStyle}
+                tick={(props) => <LeftAlignedCategoryTick {...props} />}
                 tickLine={false}
                 axisLine={false}
-                width={110}
+                width={CATEGORY_AXIS_WIDTH}
               />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: `1px solid ${GRID}` }} />
               <Bar dataKey="kg" fill={GREEN} radius={[0, 4, 4, 0]} maxBarSize={28} />
